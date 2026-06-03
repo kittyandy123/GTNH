@@ -1,4 +1,4 @@
-package com.myname.mymodid;
+package dev.gtnhplanner.gtnhcalculatorutility;
 
 import java.io.File;
 
