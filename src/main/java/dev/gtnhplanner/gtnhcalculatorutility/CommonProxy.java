@@ -4,6 +4,7 @@ import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
+import dev.gtnhplanner.gtnhcalculatorutility.command.CommandGTNHCalc;
 
 public class CommonProxy {
 
@@ -23,5 +24,8 @@ public class CommonProxy {
     public void postInit(FMLPostInitializationEvent event) {}
 
     // register server commands in this event handler (Remove if not needed)
-    public void serverStarting(FMLServerStartingEvent event) {}
+    public void serverStarting(FMLServerStartingEvent event) {
+        GTNHCalculatorUtility.LOG.info("Registering /gtnhcalc command");
+        event.registerServerCommand(new CommandGTNHCalc());
+    }
 }

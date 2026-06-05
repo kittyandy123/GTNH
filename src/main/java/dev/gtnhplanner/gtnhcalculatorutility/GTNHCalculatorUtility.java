@@ -48,6 +48,7 @@ public class GTNHCalculatorUtility {
     @Mod.EventHandler
     // register server commands in this event handler (Remove if not needed)
     public void serverStarting(FMLServerStartingEvent event) {
+        LOG.info("GTNH Calculator Utility serverStarting fired");
         proxy.serverStarting(event);
     }
 }
