@@ -3,6 +3,7 @@ package dev.gtnhplanner.gtnhcalculatorutility.export;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import net.minecraft.item.Item;
@@ -21,7 +22,7 @@ public class RecipeExporter {
 
     private static final int FURNACE_DURATION_TICKS = 200;
 
-    public File exportRecipes(File minecraftDir) throws IOException {
+    public ExportResult exportRecipes(File minecraftDir) throws IOException {
         File exportDir = new File(minecraftDir, "gtnh-calculator-utility");
         if (!exportDir.exists() && !exportDir.mkdirs()) {
             throw new IOException("Failed to create export directory: " + exportDir.getAbsolutePath());
@@ -35,7 +36,7 @@ public class RecipeExporter {
         File outputFile = new File(exportDir, "recipes-test.json");
         writeJson(outputFile, document);
 
-        return outputFile;
+        return createResult(outputFile, document);
     }
 
     private void addTestDieselRecipe(ExportDocument document) {
@@ -117,6 +118,28 @@ public class RecipeExporter {
             .replace(":", "_")
             .replace(" ", "_")
             .replace("/", "_");
+    }
+
+    private ExportResult createResult(File outputFile, ExportDocument document) {
+
+        Map<String, Integer> recipeCountByMachine = new LinkedHashMap<>();
+
+        for (ExportRecipe recipe : document.recipes) {
+            String machineId = "unknown";
+
+            if (recipe.machine != null && recipe.machine.id != null) {
+                machineId = recipe.machine.id;
+            }
+
+            Integer currentCount = recipeCountByMachine.get(machineId);
+            if (currentCount == null) {
+                recipeCountByMachine.put(machineId, 1);
+            } else {
+                recipeCountByMachine.put(machineId, currentCount + 1);
+            }
+        }
+
+        return new ExportResult(outputFile, document.recipes.size(), recipeCountByMachine);
     }
 
     private void writeJson(File outputFile, ExportDocument document) throws IOException {

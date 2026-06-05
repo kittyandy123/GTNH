@@ -4,12 +4,14 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.util.ChatComponentText;
 
 import cpw.mods.fml.common.Loader;
+import dev.gtnhplanner.gtnhcalculatorutility.export.ExportResult;
 import dev.gtnhplanner.gtnhcalculatorutility.export.RecipeExporter;
 
 public class CommandGTNHCalc extends CommandBase {
@@ -59,12 +61,21 @@ public class CommandGTNHCalc extends CommandBase {
             File minecraftDir = Loader.instance()
                 .getConfigDir()
                 .getParentFile();
-            File outputFile = new RecipeExporter().exportRecipes(minecraftDir);
-
-            sender.addChatMessage(new ChatComponentText("Exported test recipe to " + outputFile.getAbsolutePath()));
+            ExportResult result = new RecipeExporter().exportRecipes(minecraftDir);
+            sendExportSummary(sender, result);
         } catch (IOException e) {
             sender.addChatMessage(new ChatComponentText("Failed to export recipes: " + e.getMessage()));
             e.printStackTrace();
+        }
+    }
+
+    private void sendExportSummary(ICommandSender sender, ExportResult result) {
+        sender.addChatMessage(new ChatComponentText("Exported " + result.totalRecipes + " recipes to:"));
+        sender.addChatMessage(new ChatComponentText(result.outputFile.getAbsolutePath()));
+        sender.addChatMessage(new ChatComponentText("Recipe counts:"));
+
+        for (Map.Entry<String, Integer> entry : result.recipeCountByMachine.entrySet()) {
+            sender.addChatMessage(new ChatComponentText("- " + entry.getKey() + ": " + entry.getValue()));
         }
     }
 }
