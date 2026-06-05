@@ -13,6 +13,7 @@ import net.minecraft.util.ChatComponentText;
 import cpw.mods.fml.common.Loader;
 import dev.gtnhplanner.gtnhcalculatorutility.export.ExportResult;
 import dev.gtnhplanner.gtnhcalculatorutility.export.RecipeExporter;
+import dev.gtnhplanner.gtnhcalculatorutility.gregtech.GregTechRecipeMapSummary;
 
 public class CommandGTNHCalc extends CommandBase {
 
@@ -23,7 +24,7 @@ public class CommandGTNHCalc extends CommandBase {
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "/gtnhcalc hello|export";
+        return "/gtnhcalc hello|export|gt-summary";
     }
 
     @Override
@@ -40,6 +41,11 @@ public class CommandGTNHCalc extends CommandBase {
 
         if (args.length == 1 && "export".equalsIgnoreCase(args[0])) {
             exportRecipes(sender);
+            return;
+        }
+
+        if (args.length == 1 && "gt-summary".equalsIgnoreCase(args[0])) {
+            summarizeGregTech(sender);
             return;
         }
 
@@ -76,6 +82,23 @@ public class CommandGTNHCalc extends CommandBase {
 
         for (Map.Entry<String, Integer> entry : result.recipeCountByMachine.entrySet()) {
             sender.addChatMessage(new ChatComponentText("- " + entry.getKey() + ": " + entry.getValue()));
+        }
+    }
+
+    private void summarizeGregTech(ICommandSender sender) {
+        List<String> lines = new GregTechRecipeMapSummary().summarizeRecipeMaps();
+
+        sender.addChatMessage(new ChatComponentText("GregTech RecipeMaps found: " + lines.size()));
+
+        int shown = 0;
+        for (String line : lines) {
+            sender.addChatMessage(new ChatComponentText("- " + line));
+            shown++;
+
+            if (shown >= 20) {
+                sender.addChatMessage(new ChatComponentText("...truncated after 20 maps"));
+                break;
+            }
         }
     }
 }

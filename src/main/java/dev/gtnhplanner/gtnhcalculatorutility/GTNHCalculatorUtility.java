@@ -14,7 +14,8 @@ import cpw.mods.fml.common.event.FMLServerStartingEvent;
     modid = GTNHCalculatorUtility.MODID,
     version = Tags.VERSION,
     name = GTNHCalculatorUtility.NAME,
-    acceptedMinecraftVersions = "[1.7.10]")
+    acceptedMinecraftVersions = "[1.7.10]",
+    dependencies = "required-after:gregtech")
 public class GTNHCalculatorUtility {
 
     public static final String MODID = "gtnhcalculatorutility";
