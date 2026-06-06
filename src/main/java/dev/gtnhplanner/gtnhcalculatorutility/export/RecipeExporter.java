@@ -7,6 +7,7 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,7 +34,11 @@ public class RecipeExporter {
 
     private static final int FURNACE_DURATION_TICKS = 200;
 
+    private int duplicateRecipesSkipped;
+
     public ExportResult exportRecipes(File minecraftDir) throws IOException {
+        duplicateRecipesSkipped = 0;
+
         File exportDir = new File(minecraftDir, "gtnh-calculator-utility");
         if (!exportDir.exists() && !exportDir.mkdirs()) {
             throw new IOException("Failed to create export directory: " + exportDir.getAbsolutePath());
@@ -51,6 +56,8 @@ public class RecipeExporter {
             "gregtech:chemical_reactor",
             "Chemical Reactor",
             RecipeMaps.chemicalReactorRecipes);
+
+        deduplicateRecipes(document);
 
         File outputFile = new File(exportDir, "recipes-test.json");
         writeJson(outputFile, document);
@@ -438,18 +445,12 @@ public class RecipeExporter {
     private ExportResult createResult(File outputFile, ExportDocument document) {
 
         Map<String, Integer> recipeCountByMachine = new LinkedHashMap<>();
-        Set<String> seenRecipeIds = new HashSet<>();
-        int duplicateRecipeIds = 0;
 
         for (ExportRecipe recipe : document.recipes) {
             String machineId = "unknown";
 
             if (recipe.machine != null && recipe.machine.id != null) {
                 machineId = recipe.machine.id;
-            }
-
-            if (recipe.id != null && !seenRecipeIds.add(recipe.id)) {
-                duplicateRecipeIds++;
             }
 
             Integer currentCount = recipeCountByMachine.get(machineId);
@@ -460,11 +461,31 @@ public class RecipeExporter {
             }
         }
 
-        if (duplicateRecipeIds > 0) {
-            System.out.println("GTNH Calculator Utility found duplicate recipe IDs: " + duplicateRecipeIds);
+        if (duplicateRecipesSkipped > 0) {
+            System.out.println("GTNH Calculator Utility skippe duplicate recipes: " + duplicateRecipesSkipped);
         }
 
-        return new ExportResult(outputFile, document.recipes.size(), recipeCountByMachine);
+        return new ExportResult(outputFile, document.recipes.size(), duplicateRecipesSkipped, recipeCountByMachine);
+    }
+
+    private void deduplicateRecipes(ExportDocument document) {
+        Set<String> seenRecipeIds = new HashSet<>();
+        List<ExportRecipe> deduplicatedRecipes = new ArrayList<>();
+
+        for (ExportRecipe recipe : document.recipes) {
+            if (recipe.id == null) {
+                deduplicatedRecipes.add(recipe);
+                continue;
+            }
+
+            if (seenRecipeIds.add(recipe.id)) {
+                deduplicatedRecipes.add(recipe);
+            } else {
+                duplicateRecipesSkipped++;
+            }
+        }
+
+        document.recipes = deduplicatedRecipes;
     }
 
     private void writeJson(File outputFile, ExportDocument document) throws IOException {

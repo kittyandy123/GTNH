@@ -8,11 +8,14 @@ public class ExportResult {
 
     public final File outputFile;
     public final int totalRecipes;
+    public final int duplicateRecipesSkipped;
     public final Map<String, Integer> recipeCountByMachine;
 
-    public ExportResult(File outputFile, int totalRecipes, Map<String, Integer> recipeCountsByMachine) {
+    public ExportResult(File outputFile, int totalRecipes, int duplicateRecipesSkipped,
+        Map<String, Integer> recipeCountsByMachine) {
         this.outputFile = outputFile;
         this.totalRecipes = totalRecipes;
+        this.duplicateRecipesSkipped = duplicateRecipesSkipped;
         this.recipeCountByMachine = new LinkedHashMap<>(recipeCountsByMachine);
     }
 

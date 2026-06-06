@@ -78,6 +78,12 @@ public class CommandGTNHCalc extends CommandBase {
     private void sendExportSummary(ICommandSender sender, ExportResult result) {
         sender.addChatMessage(new ChatComponentText("Exported " + result.totalRecipes + " recipes to:"));
         sender.addChatMessage(new ChatComponentText(result.outputFile.getAbsolutePath()));
+
+        if (result.duplicateRecipesSkipped > 0) {
+            sender
+                .addChatMessage(new ChatComponentText("Skipped duplicate recipes: " + result.duplicateRecipesSkipped));
+        }
+
         sender.addChatMessage(new ChatComponentText("Recipe counts:"));
 
         for (Map.Entry<String, Integer> entry : result.recipeCountByMachine.entrySet()) {
