@@ -12,5 +12,6 @@ public class ExportRecipe {
     public int eut;
     public List<ExportStack> inputs = new ArrayList<>();
     public List<ExportStack> outputs = new ArrayList<>();
+    public RecipeMetadata metadata = new RecipeMetadata();
 
 }

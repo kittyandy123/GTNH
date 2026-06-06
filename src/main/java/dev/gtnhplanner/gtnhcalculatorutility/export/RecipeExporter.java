@@ -4,11 +4,13 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.FurnaceRecipes;
+import net.minecraftforge.fluids.FluidStack;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -17,6 +19,8 @@ import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportDocument;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportRecipe;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportStack;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.MachineInfo;
+import gregtech.api.recipe.RecipeMaps;
+import gregtech.api.util.GTRecipe;
 
 public class RecipeExporter {
 
@@ -32,6 +36,7 @@ public class RecipeExporter {
 
         addTestDieselRecipe(document);
         addFurnaceRecipes(document);
+        addGregTechMixerRecipes(document, 25);
 
         File outputFile = new File(exportDir, "recipes-test.json");
         writeJson(outputFile, document);
@@ -84,6 +89,77 @@ public class RecipeExporter {
 
     }
 
+    private void addGregTechMixerRecipes(ExportDocument document, int limit) {
+        int exported = 0;
+
+        for (Object rawRecipe : RecipeMaps.mixerRecipes.getAllRecipes()) {
+            if (!(rawRecipe instanceof GTRecipe)) {
+                continue;
+            }
+
+            GTRecipe gtRecipe = (GTRecipe) rawRecipe;
+
+            if (!gtRecipe.mEnabled || gtRecipe.mHidden || gtRecipe.mFakeRecipe) {
+                continue;
+            }
+
+            ExportRecipe recipe = new ExportRecipe();
+
+            recipe.id = "gregtech:mixer:" + exported;
+            recipe.machine = new MachineInfo("gregtech:mixer", "Mixer", "GregTech");
+            recipe.durationTicks = gtRecipe.mDuration;
+            recipe.durationSeconds = gtRecipe.mDuration / 20.0;
+            recipe.eut = gtRecipe.mEUt;
+            recipe.metadata.hidden = gtRecipe.mHidden;
+            recipe.metadata.fakeRecipe = gtRecipe.mFakeRecipe;
+
+            addItemStacks(recipe, recipe.inputs, gtRecipe.mInputs);
+            addFluidStacks(recipe.inputs, gtRecipe.mFluidInputs);
+            addItemStacks(recipe, recipe.outputs, gtRecipe.mOutputs);
+            addFluidStacks(recipe.outputs, gtRecipe.mFluidOutputs);
+
+            document.recipes.add(recipe);
+
+            exported++;
+            if (exported >= limit) {
+                break;
+            }
+        }
+    }
+
+    private void addItemStacks(ExportRecipe recipe, List<ExportStack> target, ItemStack[] stacks) {
+        if (stacks == null) {
+            return;
+        }
+
+        for (ItemStack stack : stacks) {
+            if (stack == null) {
+                continue;
+            }
+
+            if (isProgrammedCircuit(stack)) {
+                recipe.metadata.circuit = stack.getItemDamage();
+                continue;
+            }
+
+            target.add(toExportStack(stack));
+        }
+    }
+
+    private void addFluidStacks(List<ExportStack> target, FluidStack[] stacks) {
+        if (stacks == null) {
+            return;
+        }
+
+        for (FluidStack stack : stacks) {
+            if (stack == null) {
+                continue;
+            }
+
+            target.add(toExportStack(stack));
+        }
+    }
+
     private ExportStack toExportStack(ItemStack stack) {
 
         return new ExportStack(
@@ -94,6 +170,19 @@ public class RecipeExporter {
             stack.stackSize,
             "items");
 
+    }
+
+    private ExportStack toExportStack(FluidStack stack) {
+        String fluidId = "unknown";
+        String displayName = "Unknown Fluid";
+
+        if (stack.getFluid() != null) {
+            fluidId = stack.getFluid()
+                .getName();
+            displayName = stack.getLocalizedName();
+        }
+
+        return new ExportStack("fluid", fluidId, 0, displayName, stack.amount, "L");
     }
 
     private String getItemId(ItemStack stack) {
@@ -118,6 +207,10 @@ public class RecipeExporter {
             .replace(":", "_")
             .replace(" ", "_")
             .replace("/", "_");
+    }
+
+    private boolean isProgrammedCircuit(ItemStack stack) {
+        return "gregtech:gt.integrated_circuit".equals(getItemId(stack));
     }
 
     private ExportResult createResult(File outputFile, ExportDocument document) {
