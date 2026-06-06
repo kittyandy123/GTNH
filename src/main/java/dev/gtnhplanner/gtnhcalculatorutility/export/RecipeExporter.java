@@ -3,9 +3,14 @@ package dev.gtnhplanner.gtnhcalculatorutility.export;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -36,7 +41,7 @@ public class RecipeExporter {
 
         addTestDieselRecipe(document);
         addFurnaceRecipes(document);
-        addGregTechMixerRecipes(document, 25);
+        addGregTechMixerRecipes(document, Integer.MAX_VALUE);
 
         File outputFile = new File(exportDir, "recipes-test.json");
         writeJson(outputFile, document);
@@ -105,7 +110,7 @@ public class RecipeExporter {
 
             ExportRecipe recipe = new ExportRecipe();
 
-            recipe.id = "gregtech:mixer:" + exported;
+            recipe.id = createRecipeId("gregtech:mixer", gtRecipe);
             recipe.machine = new MachineInfo("gregtech:mixer", "Mixer", "GregTech");
             recipe.durationTicks = gtRecipe.mDuration;
             recipe.durationSeconds = gtRecipe.mDuration / 20.0;
@@ -213,9 +218,92 @@ public class RecipeExporter {
         return "gregtech:gt.integrated_circuit".equals(getItemId(stack));
     }
 
+    private String createRecipeId(String machineId, GTRecipe recipe) {
+        StringBuilder identity = new StringBuilder();
+
+        identity.append(machineId)
+            .append('|')
+            .append(recipe.mDuration)
+            .append('|')
+            .append(recipe.mEUt)
+            .append('|');
+
+        appendItemStacks(identity, recipe.mInputs);
+        identity.append('|');
+        appendFluidStacks(identity, recipe.mFluidInputs);
+        identity.append('|');
+        appendItemStacks(identity, recipe.mOutputs);
+        identity.append('|');
+        appendFluidStacks(identity, recipe.mFluidOutputs);
+
+        return machineId + ":" + sha1Short(identity.toString());
+    }
+
+    private void appendItemStacks(StringBuilder identity, ItemStack[] stacks) {
+        if (stacks == null) {
+            return;
+        }
+
+        for (ItemStack stack : stacks) {
+            if (stack == null) {
+                continue;
+            }
+
+            identity.append("item:")
+                .append(getItemId(stack))
+                .append(':')
+                .append(stack.getItemDamage())
+                .append(':')
+                .append(stack.stackSize)
+                .append(';');
+        }
+    }
+
+    private void appendFluidStacks(StringBuilder identity, FluidStack[] stacks) {
+        if (stacks == null) {
+            return;
+        }
+
+        for (FluidStack stack : stacks) {
+            if (stack == null) {
+                continue;
+            }
+
+            String fluidId = "unknown";
+            if (stack.getFluid() != null) {
+                fluidId = stack.getFluid()
+                    .getName();
+            }
+
+            identity.append("fluid:")
+                .append(fluidId)
+                .append(':')
+                .append(stack.amount)
+                .append(';');
+        }
+    }
+
+    private String sha1Short(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-1");
+            byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+
+            StringBuilder result = new StringBuilder();
+            for (int i = 0; i < 8 && i < hash.length; i++) {
+                result.append(String.format("%02x", hash[i] & 0xff));
+            }
+
+            return result.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-1 algorithm was not available", e);
+        }
+    }
+
     private ExportResult createResult(File outputFile, ExportDocument document) {
 
         Map<String, Integer> recipeCountByMachine = new LinkedHashMap<>();
+        Set<String> seenRecipeIds = new HashSet<>();
+        int duplicateRecipeIds = 0;
 
         for (ExportRecipe recipe : document.recipes) {
             String machineId = "unknown";
@@ -224,12 +312,20 @@ public class RecipeExporter {
                 machineId = recipe.machine.id;
             }
 
+            if (recipe.id != null && !seenRecipeIds.add(recipe.id)) {
+                duplicateRecipeIds++;
+            }
+
             Integer currentCount = recipeCountByMachine.get(machineId);
             if (currentCount == null) {
                 recipeCountByMachine.put(machineId, 1);
             } else {
                 recipeCountByMachine.put(machineId, currentCount + 1);
             }
+        }
+
+        if (duplicateRecipeIds > 0) {
+            System.out.println("GTNH Calculator Utility found duplicate recipe IDs: " + duplicateRecipeIds);
         }
 
         return new ExportResult(outputFile, document.recipes.size(), recipeCountByMachine);
