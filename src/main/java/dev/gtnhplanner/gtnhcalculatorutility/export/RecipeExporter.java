@@ -24,6 +24,7 @@ import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportDocument;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportRecipe;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportStack;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.MachineInfo;
+import gregtech.api.recipe.RecipeMap;
 import gregtech.api.recipe.RecipeMaps;
 import gregtech.api.util.GTRecipe;
 
@@ -41,7 +42,14 @@ public class RecipeExporter {
 
         addTestDieselRecipe(document);
         addFurnaceRecipes(document);
-        addGregTechMixerRecipes(document, Integer.MAX_VALUE);
+        addGregTechRecipeMap(document, "gregtech:mixer", "Mixer", RecipeMaps.mixerRecipes);
+        addGregTechRecipeMap(document, "gregtech:centrifuge", "Centrifuge", RecipeMaps.centrifugeRecipes);
+        addGregTechRecipeMap(document, "gregtech:electrolyzer", "Electrolyzer", RecipeMaps.electrolyzerRecipes);
+        addGregTechRecipeMap(
+            document,
+            "gregtech:chemical_reactor",
+            "Chemical Reactor",
+            RecipeMaps.chemicalReactorRecipes);
 
         File outputFile = new File(exportDir, "recipes-test.json");
         writeJson(outputFile, document);
@@ -94,10 +102,9 @@ public class RecipeExporter {
 
     }
 
-    private void addGregTechMixerRecipes(ExportDocument document, int limit) {
-        int exported = 0;
-
-        for (Object rawRecipe : RecipeMaps.mixerRecipes.getAllRecipes()) {
+    private void addGregTechRecipeMap(ExportDocument document, String machineId, String machineName,
+        RecipeMap<?> recipeMap) {
+        for (Object rawRecipe : recipeMap.getAllRecipes()) {
             if (!(rawRecipe instanceof GTRecipe)) {
                 continue;
             }
@@ -108,28 +115,28 @@ public class RecipeExporter {
                 continue;
             }
 
-            ExportRecipe recipe = new ExportRecipe();
-
-            recipe.id = createRecipeId("gregtech:mixer", gtRecipe);
-            recipe.machine = new MachineInfo("gregtech:mixer", "Mixer", "GregTech");
-            recipe.durationTicks = gtRecipe.mDuration;
-            recipe.durationSeconds = gtRecipe.mDuration / 20.0;
-            recipe.eut = gtRecipe.mEUt;
-            recipe.metadata.hidden = gtRecipe.mHidden;
-            recipe.metadata.fakeRecipe = gtRecipe.mFakeRecipe;
-
-            addItemStacks(recipe, recipe.inputs, gtRecipe.mInputs);
-            addFluidStacks(recipe.inputs, gtRecipe.mFluidInputs);
-            addItemStacks(recipe, recipe.outputs, gtRecipe.mOutputs);
-            addFluidStacks(recipe.outputs, gtRecipe.mFluidOutputs);
-
+            ExportRecipe recipe = createGregTechRecipe(machineId, machineName, gtRecipe);
             document.recipes.add(recipe);
-
-            exported++;
-            if (exported >= limit) {
-                break;
-            }
         }
+    }
+
+    private ExportRecipe createGregTechRecipe(String machineId, String machineName, GTRecipe gtRecipe) {
+        ExportRecipe recipe = new ExportRecipe();
+
+        recipe.id = createRecipeId(machineId, gtRecipe);
+        recipe.machine = new MachineInfo(machineId, machineName, "GregTech");
+        recipe.durationTicks = gtRecipe.mDuration;
+        recipe.durationSeconds = gtRecipe.mDuration / 20.0;
+        recipe.eut = gtRecipe.mEUt;
+        recipe.metadata.hidden = gtRecipe.mHidden;
+        recipe.metadata.fakeRecipe = gtRecipe.mFakeRecipe;
+
+        addItemStacks(recipe, recipe.inputs, gtRecipe.mInputs);
+        addFluidStacks(recipe.inputs, gtRecipe.mFluidInputs);
+        addItemStacks(recipe, recipe.outputs, gtRecipe.mOutputs);
+        addFluidStacks(recipe.outputs, gtRecipe.mFluidOutputs);
+
+        return recipe;
     }
 
     private void addItemStacks(ExportRecipe recipe, List<ExportStack> target, ItemStack[] stacks) {
