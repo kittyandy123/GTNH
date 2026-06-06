@@ -8,6 +8,7 @@ public class ExportStack {
     public String displayName;
     public int amount;
     public String unit;
+    public Double chance;
 
     public ExportStack(String kind, String id, int meta, String displayName, int amount, String unit) {
         this.kind = kind;

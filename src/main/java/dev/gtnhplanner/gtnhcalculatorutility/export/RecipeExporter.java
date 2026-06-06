@@ -3,6 +3,7 @@ package dev.gtnhplanner.gtnhcalculatorutility.export;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -115,12 +116,13 @@ public class RecipeExporter {
                 continue;
             }
 
-            ExportRecipe recipe = createGregTechRecipe(machineId, machineName, gtRecipe);
+            ExportRecipe recipe = createGregTechRecipe(machineId, machineName, recipeMap, gtRecipe);
             document.recipes.add(recipe);
         }
     }
 
-    private ExportRecipe createGregTechRecipe(String machineId, String machineName, GTRecipe gtRecipe) {
+    private ExportRecipe createGregTechRecipe(String machineId, String machineName, RecipeMap<?> recipeMap,
+        GTRecipe gtRecipe) {
         ExportRecipe recipe = new ExportRecipe();
 
         recipe.id = createRecipeId(machineId, gtRecipe);
@@ -130,46 +132,111 @@ public class RecipeExporter {
         recipe.eut = gtRecipe.mEUt;
         recipe.metadata.hidden = gtRecipe.mHidden;
         recipe.metadata.fakeRecipe = gtRecipe.mFakeRecipe;
+        recipe.metadata.specialValue = gtRecipe.mSpecialValue;
+        recipe.metadata.needsEmptyOutput = gtRecipe.mNeedsEmptyOutput;
+        recipe.metadata.nbtSensitive = gtRecipe.isNBTSensitive;
+        recipe.metadata.recipeMap = machineId;
+        recipe.metadata.recipeMapUnlocalizedName = recipeMap.unlocalizedName;
+        recipe.metadata.recipeCategory = String.valueOf(gtRecipe.getRecipeCategory());
 
-        addItemStacks(recipe, recipe.inputs, gtRecipe.mInputs);
-        addFluidStacks(recipe.inputs, gtRecipe.mFluidInputs);
-        addItemStacks(recipe, recipe.outputs, gtRecipe.mOutputs);
-        addFluidStacks(recipe.outputs, gtRecipe.mFluidOutputs);
+        String neiDescription = firstNonEmpty(
+            getOptionalStringValue(gtRecipe, "getNeiDesc"),
+            getOptionalStringValue(gtRecipe, "getNEIDescription"),
+            getOptionalStringValue(gtRecipe, "getNeiDescription"));
+        if (neiDescription != null && !neiDescription.isEmpty()) {
+            recipe.metadata.neiDescription = neiDescription;
+        }
+
+        addItemStacks(recipe, recipe.inputs, gtRecipe, gtRecipe.mInputs, true);
+        addFluidStacks(recipe.inputs, gtRecipe, gtRecipe.mFluidInputs, true);
+        addItemStacks(recipe, recipe.outputs, gtRecipe, gtRecipe.mOutputs, false);
+        addFluidStacks(recipe.outputs, gtRecipe, gtRecipe.mFluidOutputs, false);
 
         return recipe;
     }
 
-    private void addItemStacks(ExportRecipe recipe, List<ExportStack> target, ItemStack[] stacks) {
+    private String firstNonEmpty(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isEmpty()) {
+                return value;
+            }
+        }
+
+        return null;
+    }
+
+    private String getOptionalStringValue(Object target, String methodName) {
+        try {
+            Method method = target.getClass()
+                .getMethod(methodName);
+
+            Object value = method.invoke(target);
+
+            if (value instanceof String) {
+                return (String) value;
+            }
+        } catch (Exception ignored) {
+
+        }
+
+        return null;
+    }
+
+    private void addItemStacks(ExportRecipe recipe, List<ExportStack> target, GTRecipe gtRecipe, ItemStack[] stacks,
+        boolean input) {
         if (stacks == null) {
             return;
         }
 
-        for (ItemStack stack : stacks) {
+        for (int i = 0; i < stacks.length; i++) {
+            ItemStack stack = stacks[i];
+
             if (stack == null) {
                 continue;
             }
 
-            if (isProgrammedCircuit(stack)) {
+            if (input && isProgrammedCircuit(stack)) {
                 recipe.metadata.circuit = stack.getItemDamage();
                 continue;
             }
 
-            target.add(toExportStack(stack));
+            ExportStack exportStack = toExportStack(stack);
+
+            int chance = input ? getChance(gtRecipe, "getInputChance", i) : getChance(gtRecipe, "getOutputChance", i);
+
+            applyChance(exportStack, chance);
+            target.add(exportStack);
         }
     }
 
-    private void addFluidStacks(List<ExportStack> target, FluidStack[] stacks) {
+    private void addFluidStacks(List<ExportStack> target, GTRecipe gtRecipe, FluidStack[] stacks, boolean input) {
         if (stacks == null) {
             return;
         }
 
-        for (FluidStack stack : stacks) {
+        for (int i = 0; i < stacks.length; i++) {
+            FluidStack stack = stacks[i];
+
             if (stack == null) {
                 continue;
             }
 
-            target.add(toExportStack(stack));
+            ExportStack exportStack = toExportStack(stack);
+
+            int chance = input ? getChance(gtRecipe, "getFluidInputChance", i)
+                : getChance(gtRecipe, "getFluidOutputChance", i);
+
+            applyChance(exportStack, chance);
+            target.add(exportStack);
         }
+    }
+
+    private void applyChance(ExportStack exportStack, int chance) {
+        if (chance <= 0 || chance >= 10000) {
+            return;
+        }
+
+        exportStack.chance = chance / 10000.0;
     }
 
     private ExportStack toExportStack(ItemStack stack) {
@@ -233,7 +300,26 @@ public class RecipeExporter {
             .append(recipe.mDuration)
             .append('|')
             .append(recipe.mEUt)
+            .append('|')
+            .append(recipe.mSpecialValue)
+            .append('|')
+            .append(recipe.mNeedsEmptyOutput)
+            .append('|')
+            .append(recipe.isNBTSensitive)
+            .append('|')
+            .append(String.valueOf(recipe.getRecipeCategory()))
+            .append('|')
+            .append(String.valueOf(recipe.mSpecialItems))
             .append('|');
+
+        appendItemChances(identity, recipe, recipe.mInputs, true);
+        identity.append('|');
+        appendItemChances(identity, recipe, recipe.mOutputs, false);
+        identity.append('|');
+        appendFluidChances(identity, recipe, recipe.mFluidInputs, true);
+        identity.append('|');
+        appendFluidChances(identity, recipe, recipe.mFluidOutputs, false);
+        identity.append('|');
 
         appendItemStacks(identity, recipe.mInputs);
         identity.append('|');
@@ -244,6 +330,49 @@ public class RecipeExporter {
         appendFluidStacks(identity, recipe.mFluidOutputs);
 
         return machineId + ":" + sha1Short(identity.toString());
+    }
+
+    private void appendItemChances(StringBuilder identity, GTRecipe recipe, ItemStack[] stacks, boolean input) {
+        if (stacks == null) {
+            return;
+        }
+
+        String methodName = input ? "getInputChance" : "getOutputChance";
+
+        for (int i = 0; i < stacks.length; i++) {
+            identity.append(getChance(recipe, methodName, i))
+                .append(';');
+        }
+    }
+
+    private void appendFluidChances(StringBuilder identity, GTRecipe recipe, FluidStack[] stacks, boolean input) {
+        if (stacks == null) {
+            return;
+        }
+
+        String methodName = input ? "getFluidInputChance" : "getFluidOutputChance";
+
+        for (int i = 0; i < stacks.length; i++) {
+            identity.append(getChance(recipe, methodName, i))
+                .append(';');
+        }
+    }
+
+    private int getChance(GTRecipe recipe, String methodName, int index) {
+        try {
+            Method method = recipe.getClass()
+                .getMethod(methodName, int.class);
+
+            Object value = method.invoke(recipe, index);
+
+            if (value instanceof Integer) {
+                return (Integer) value;
+            }
+        } catch (Exception ignored) {
+
+        }
+
+        return 10000;
     }
 
     private void appendItemStacks(StringBuilder identity, ItemStack[] stacks) {
