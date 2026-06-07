@@ -2,18 +2,23 @@ package dev.gtnhplanner.gtnhcalculatorutility.export.vanilla;
 
 import java.util.Map;
 
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.FurnaceRecipes;
 
+import dev.gtnhplanner.gtnhcalculatorutility.export.item.ItemStackExporter;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportDocument;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportRecipe;
-import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportStack;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.MachineInfo;
 
 public class VanillaFurnaceExporter {
 
     private static final int FURNACE_DURATION_TICKS = 200;
+
+    private final ItemStackExporter itemStackExporter;
+
+    public VanillaFurnaceExporter(ItemStackExporter itemStackExporter) {
+        this.itemStackExporter = itemStackExporter;
+    }
 
     public void addRecipes(ExportDocument document) {
         Map<?, ?> furnaceRecipes = FurnaceRecipes.smelting()
@@ -28,69 +33,19 @@ public class VanillaFurnaceExporter {
             ItemStack output = (ItemStack) entry.getValue();
 
             ExportRecipe recipe = new ExportRecipe();
-            recipe.id = "minecraft:furnace:" + getStackId(input) + "_to_" + getStackId(output);
+            recipe.id = "minecraft:furnace:" + itemStackExporter.getStackId(input)
+                + "_to_"
+                + itemStackExporter.getStackId(output);
             recipe.machine = new MachineInfo("minecraft:furnace", "Furnace", "Minecraft");
             recipe.durationTicks = FURNACE_DURATION_TICKS;
             recipe.durationSeconds = FURNACE_DURATION_TICKS / 20.0;
             recipe.eut = 0;
 
-            recipe.inputs.add(toExportStack(input));
-            recipe.outputs.add(toExportStack(output));
+            recipe.inputs.add(itemStackExporter.toExportStack(input));
+            recipe.outputs.add(itemStackExporter.toExportStack(output));
 
             document.recipes.add(recipe);
         }
-    }
-
-    private ExportStack toExportStack(ItemStack stack) {
-        return new ExportStack(
-            "item",
-            getItemId(stack),
-            stack.getItemDamage(),
-            getSafeDisplayName(stack),
-            stack.stackSize,
-            "items");
-    }
-
-    private String getSafeDisplayName(ItemStack stack) {
-        try {
-            String displayName = stack.getDisplayName();
-
-            if (displayName != null && !displayName.isEmpty()) {
-                return displayName;
-            }
-        } catch (Exception e) {
-            System.out.println(
-                "GTNH Calculator Utility could not read display name for item " + getItemId(stack)
-                    + ":"
-                    + stack.getItemDamage()
-                    + " - "
-                    + e.getClass()
-                        .getSimpleName());
-        }
-
-        return getItemId(stack) + ":" + stack.getItemDamage();
-    }
-
-    private String getItemId(ItemStack stack) {
-        Item item = stack.getItem();
-        String itemId = Item.itemRegistry.getNameForObject(item);
-
-        if (itemId == null) {
-            return "unknown";
-        }
-
-        return itemId;
-    }
-
-    private String getStackId(ItemStack stack) {
-        return sanitizeId(getItemId(stack) + "_" + stack.getItemDamage());
-    }
-
-    private String sanitizeId(String value) {
-        return value.toLowerCase()
-            .replace(":", "_")
-            .replace(" ", "_")
-            .replace("/", "_");
     }
 
 }

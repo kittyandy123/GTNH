@@ -19,6 +19,7 @@ import com.google.gson.GsonBuilder;
 import dev.gtnhplanner.gtnhcalculatorutility.export.gregtech.GregTechRecipeMapCatalog;
 import dev.gtnhplanner.gtnhcalculatorutility.export.gregtech.GregTechRecipeMapDefinition;
 import dev.gtnhplanner.gtnhcalculatorutility.export.gregtech.GregTechRecipeMapExporter;
+import dev.gtnhplanner.gtnhcalculatorutility.export.item.ItemStackExporter;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportDiagnostics;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportDocument;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportRecipe;
@@ -39,9 +40,11 @@ public class RecipeExporter {
         ExportDocument document = new ExportDocument();
         document.export.exportedAt = createUtcTimestamp();
 
-        new VanillaFurnaceExporter().addRecipes(document);
+        ItemStackExporter itemStackExporter = new ItemStackExporter();
 
-        GregTechRecipeMapExporter gregTechExporter = new GregTechRecipeMapExporter();
+        new VanillaFurnaceExporter(itemStackExporter).addRecipes(document);
+
+        GregTechRecipeMapExporter gregTechExporter = new GregTechRecipeMapExporter(itemStackExporter);
         GregTechRecipeMapCatalog gregTechCatalog = new GregTechRecipeMapCatalog();
 
         for (GregTechRecipeMapDefinition definition : gregTechCatalog.getRecipeMaps()) {
@@ -57,7 +60,7 @@ public class RecipeExporter {
         }
 
         deduplicateRecipes(document);
-        populateDiagnostics(document);
+        populateDiagnostics(document, itemStackExporter);
 
         File outputFile = new File(exportDir, "recipes-test.json");
         writeJson(outputFile, document);
@@ -97,11 +100,13 @@ public class RecipeExporter {
         document.recipes = deduplicatedRecipes;
     }
 
-    private void populateDiagnostics(ExportDocument document) {
+    private void populateDiagnostics(ExportDocument document, ItemStackExporter itemStackExporter) {
         ExportDiagnostics diagnostics = new ExportDiagnostics();
 
         diagnostics.totalRecipes = document.recipes.size();
         diagnostics.duplicateRecipesSkipped = duplicateRecipesSkipped;
+        diagnostics.displayNameFallbackItems.addAll(itemStackExporter.getDisplayNameFallbackItems());
+        diagnostics.displayNameFallbacks = diagnostics.displayNameFallbackItems.size();
         diagnostics.recipeCountsByMachine.putAll(countRecipesByMachine(document));
 
         document.diagnostics = diagnostics;

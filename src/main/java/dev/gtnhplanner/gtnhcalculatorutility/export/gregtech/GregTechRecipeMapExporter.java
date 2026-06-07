@@ -5,13 +5,11 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
-import java.util.HashSet;
-import java.util.Set;
 
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
+import dev.gtnhplanner.gtnhcalculatorutility.export.item.ItemStackExporter;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportDocument;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportRecipe;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportStack;
@@ -21,7 +19,11 @@ import gregtech.api.util.GTRecipe;
 
 public class GregTechRecipeMapExporter {
 
-    private final Set<String> displayNameWarningKeys = new HashSet<>();
+    private final ItemStackExporter itemStackExporter;
+
+    public GregTechRecipeMapExporter(ItemStackExporter itemStackExporter) {
+        this.itemStackExporter = itemStackExporter;
+    }
 
     public void addRecipeMap(ExportDocument document, String machineId, String machineName, RecipeMap<?> recipeMap) {
         for (Object rawRecipe : recipeMap.getAllRecipes()) {
@@ -130,7 +132,7 @@ public class GregTechRecipeMapExporter {
                 continue;
             }
 
-            ExportStack exportStack = toExportStack(stack);
+            ExportStack exportStack = itemStackExporter.toExportStack(stack);
 
             int chance = input ? getChance(gtRecipe, "getInputChance", i) : getChance(gtRecipe, "getOutputChance", i);
 
@@ -169,18 +171,6 @@ public class GregTechRecipeMapExporter {
         exportStack.chance = chance / 10000.0;
     }
 
-    private ExportStack toExportStack(ItemStack stack) {
-
-        return new ExportStack(
-            "item",
-            getItemId(stack),
-            stack.getItemDamage(),
-            getSafeDisplayName(stack),
-            stack.stackSize,
-            "items");
-
-    }
-
     private ExportStack toExportStack(FluidStack stack) {
         String fluidId = "unknown";
         String displayName = "Unknown Fluid";
@@ -194,41 +184,8 @@ public class GregTechRecipeMapExporter {
         return new ExportStack("fluid", fluidId, 0, displayName, stack.amount, "L");
     }
 
-    private String getSafeDisplayName(ItemStack stack) {
-        try {
-            String displayName = stack.getDisplayName();
-
-            if (displayName != null && !displayName.isEmpty()) {
-                return displayName;
-            }
-        } catch (Exception e) {
-           String warningKey = getItemId(stack) + ":" + stack.getItemDamage();
-
-           if (displayNameWarningKeys.add(warningKey)) {
-               System.out.println("GTNH Calculator Utility could not read display name for item "
-                   + warningKey
-                   + " - "
-                   + e.getClass().getSimpleName());
-           }
-        }
-        return getItemId(stack) + ":" + stack.getItemDamage();
-    }
-
-    private String getItemId(ItemStack stack) {
-
-        Item item = stack.getItem();
-        String itemId = Item.itemRegistry.getNameForObject(item);
-
-        if (itemId == null) {
-            return "unknown";
-        }
-
-        return itemId;
-
-    }
-
     private boolean isProgrammedCircuit(ItemStack stack) {
-        return "gregtech:gt.integrated_circuit".equals(getItemId(stack));
+        return "gregtech:gt.integrated_circuit".equals(itemStackExporter.getItemId(stack));
     }
 
     private String createRecipeId(String machineId, GTRecipe recipe) {
@@ -325,7 +282,7 @@ public class GregTechRecipeMapExporter {
             }
 
             identity.append("item:")
-                .append(getItemId(stack))
+                .append(itemStackExporter.getItemId(stack))
                 .append(':')
                 .append(stack.getItemDamage())
                 .append(':')
