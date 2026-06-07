@@ -7,12 +7,15 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -46,6 +49,7 @@ public class RecipeExporter {
         }
 
         ExportDocument document = new ExportDocument();
+        document.export.exportedAt = createUtcTimestamp();
 
         addTestDieselRecipe(document);
         addFurnaceRecipes(document);
@@ -505,6 +509,12 @@ public class RecipeExporter {
         }
 
         return recipeCountByMachine;
+    }
+
+    private String createUtcTimestamp() {
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return formatter.format(new Date());
     }
 
     private void writeJson(File outputFile, ExportDocument document) throws IOException {
