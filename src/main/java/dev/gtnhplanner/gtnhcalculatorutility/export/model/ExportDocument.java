@@ -8,6 +8,7 @@ public class ExportDocument {
     public int schemaVersion = 1;
     public PackInfo pack = new PackInfo();
     public ExportInfo export = new ExportInfo();
+    public ExportDiagnostics diagnostics = new ExportDiagnostics();
     public List<ExportRecipe> recipes = new ArrayList<>();
 
 }

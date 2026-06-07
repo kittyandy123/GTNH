@@ -22,6 +22,7 @@ import net.minecraftforge.fluids.FluidStack;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportDiagnostics;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportDocument;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportRecipe;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportStack;
@@ -58,6 +59,7 @@ public class RecipeExporter {
             RecipeMaps.chemicalReactorRecipes);
 
         deduplicateRecipes(document);
+        populateDiagnostics(document);
 
         File outputFile = new File(exportDir, "recipes-test.json");
         writeJson(outputFile, document);
@@ -443,29 +445,15 @@ public class RecipeExporter {
     }
 
     private ExportResult createResult(File outputFile, ExportDocument document) {
-
-        Map<String, Integer> recipeCountByMachine = new LinkedHashMap<>();
-
-        for (ExportRecipe recipe : document.recipes) {
-            String machineId = "unknown";
-
-            if (recipe.machine != null && recipe.machine.id != null) {
-                machineId = recipe.machine.id;
-            }
-
-            Integer currentCount = recipeCountByMachine.get(machineId);
-            if (currentCount == null) {
-                recipeCountByMachine.put(machineId, 1);
-            } else {
-                recipeCountByMachine.put(machineId, currentCount + 1);
-            }
-        }
-
         if (duplicateRecipesSkipped > 0) {
-            System.out.println("GTNH Calculator Utility skippe duplicate recipes: " + duplicateRecipesSkipped);
+            System.out.println("GTNH Calculator Utility skipped duplicate recipes: " + duplicateRecipesSkipped);
         }
 
-        return new ExportResult(outputFile, document.recipes.size(), duplicateRecipesSkipped, recipeCountByMachine);
+        return new ExportResult(
+            outputFile,
+            document.recipes.size(),
+            duplicateRecipesSkipped,
+            countRecipesByMachine(document));
     }
 
     private void deduplicateRecipes(ExportDocument document) {
@@ -486,6 +474,37 @@ public class RecipeExporter {
         }
 
         document.recipes = deduplicatedRecipes;
+    }
+
+    private void populateDiagnostics(ExportDocument document) {
+        ExportDiagnostics diagnostics = new ExportDiagnostics();
+
+        diagnostics.totalRecipes = document.recipes.size();
+        diagnostics.duplicateRecipesSkipped = duplicateRecipesSkipped;
+        diagnostics.recipeCountsByMachine.putAll(countRecipesByMachine(document));
+
+        document.diagnostics = diagnostics;
+    }
+
+    private Map<String, Integer> countRecipesByMachine(ExportDocument document) {
+        Map<String, Integer> recipeCountByMachine = new LinkedHashMap<>();
+
+        for (ExportRecipe recipe : document.recipes) {
+            String machineId = "unknown";
+
+            if (recipe.machine != null && recipe.machine.id != null) {
+                machineId = recipe.machine.id;
+            }
+
+            Integer currentCount = recipeCountByMachine.get(machineId);
+            if (currentCount == null) {
+                recipeCountByMachine.put(machineId, 1);
+            } else {
+                recipeCountByMachine.put(machineId, currentCount + 1);
+            }
+        }
+
+        return recipeCountByMachine;
     }
 
     private void writeJson(File outputFile, ExportDocument document) throws IOException {
