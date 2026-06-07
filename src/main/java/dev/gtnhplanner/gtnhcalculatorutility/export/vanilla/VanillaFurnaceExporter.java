@@ -46,9 +46,29 @@ public class VanillaFurnaceExporter {
             "item",
             getItemId(stack),
             stack.getItemDamage(),
-            stack.getDisplayName(),
+            getSafeDisplayName(stack),
             stack.stackSize,
             "items");
+    }
+
+    private String getSafeDisplayName(ItemStack stack) {
+        try {
+            String displayName = stack.getDisplayName();
+
+            if (displayName != null && !displayName.isEmpty()) {
+                return displayName;
+            }
+        } catch (Exception e) {
+            System.out.println(
+                "GTNH Calculator Utility could not read display name for item " + getItemId(stack)
+                    + ":"
+                    + stack.getItemDamage()
+                    + " - "
+                    + e.getClass()
+                        .getSimpleName());
+        }
+
+        return getItemId(stack) + ":" + stack.getItemDamage();
     }
 
     private String getItemId(ItemStack stack) {

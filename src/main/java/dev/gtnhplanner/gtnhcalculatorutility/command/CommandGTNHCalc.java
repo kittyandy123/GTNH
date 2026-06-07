@@ -1,7 +1,6 @@
 package dev.gtnhplanner.gtnhcalculatorutility.command;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -69,8 +68,12 @@ public class CommandGTNHCalc extends CommandBase {
                 .getParentFile();
             ExportResult result = new RecipeExporter().exportRecipes(minecraftDir);
             sendExportSummary(sender, result);
-        } catch (IOException e) {
-            sender.addChatMessage(new ChatComponentText("Failed to export recipes: " + e.getMessage()));
+        } catch (Exception e) {
+            sender.addChatMessage(
+                new ChatComponentText(
+                    "Failed to export recipes: " + e.getClass()
+                        .getSimpleName()));
+            sender.addChatMessage(new ChatComponentText(String.valueOf(e.getMessage())));
             e.printStackTrace();
         }
     }

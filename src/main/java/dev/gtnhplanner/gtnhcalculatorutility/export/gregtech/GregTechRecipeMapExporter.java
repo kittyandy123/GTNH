@@ -5,6 +5,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -19,6 +21,8 @@ import gregtech.api.util.GTRecipe;
 
 public class GregTechRecipeMapExporter {
 
+    private final Set<String> displayNameWarningKeys = new HashSet<>();
+
     public void addRecipeMap(ExportDocument document, String machineId, String machineName, RecipeMap<?> recipeMap) {
         for (Object rawRecipe : recipeMap.getAllRecipes()) {
             if (!(rawRecipe instanceof GTRecipe)) {
@@ -31,8 +35,19 @@ public class GregTechRecipeMapExporter {
                 continue;
             }
 
-            ExportRecipe recipe = createGregTechRecipe(machineId, machineName, recipeMap, gtRecipe);
-            document.recipes.add(recipe);
+            try {
+                ExportRecipe recipe = createGregTechRecipe(machineId, machineName, recipeMap, gtRecipe);
+                document.recipes.add(recipe);
+            } catch (Exception e) {
+                System.out.println(
+                    "GTNH Calculator Utility skipped recipe in map " + machineId
+                        + " due to "
+                        + e.getClass()
+                            .getSimpleName()
+                        + ": "
+                        + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 
@@ -160,7 +175,7 @@ public class GregTechRecipeMapExporter {
             "item",
             getItemId(stack),
             stack.getItemDamage(),
-            stack.getDisplayName(),
+            getSafeDisplayName(stack),
             stack.stackSize,
             "items");
 
@@ -177,6 +192,26 @@ public class GregTechRecipeMapExporter {
         }
 
         return new ExportStack("fluid", fluidId, 0, displayName, stack.amount, "L");
+    }
+
+    private String getSafeDisplayName(ItemStack stack) {
+        try {
+            String displayName = stack.getDisplayName();
+
+            if (displayName != null && !displayName.isEmpty()) {
+                return displayName;
+            }
+        } catch (Exception e) {
+           String warningKey = getItemId(stack) + ":" + stack.getItemDamage();
+
+           if (displayNameWarningKeys.add(warningKey)) {
+               System.out.println("GTNH Calculator Utility could not read display name for item "
+                   + warningKey
+                   + " - "
+                   + e.getClass().getSimpleName());
+           }
+        }
+        return getItemId(stack) + ":" + stack.getItemDamage();
     }
 
     private String getItemId(ItemStack stack) {

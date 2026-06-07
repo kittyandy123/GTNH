@@ -16,12 +16,13 @@ import java.util.TimeZone;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import dev.gtnhplanner.gtnhcalculatorutility.export.gregtech.GregTechRecipeMapCatalog;
+import dev.gtnhplanner.gtnhcalculatorutility.export.gregtech.GregTechRecipeMapDefinition;
 import dev.gtnhplanner.gtnhcalculatorutility.export.gregtech.GregTechRecipeMapExporter;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportDiagnostics;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportDocument;
 import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportRecipe;
 import dev.gtnhplanner.gtnhcalculatorutility.export.vanilla.VanillaFurnaceExporter;
-import gregtech.api.recipe.RecipeMaps;
 
 public class RecipeExporter {
 
@@ -41,12 +42,19 @@ public class RecipeExporter {
         new VanillaFurnaceExporter().addRecipes(document);
 
         GregTechRecipeMapExporter gregTechExporter = new GregTechRecipeMapExporter();
-        gregTechExporter.addRecipeMap(document, "gregtech:mixer", "Mixer", RecipeMaps.mixerRecipes);
-        gregTechExporter.addRecipeMap(document, "gregtech:centrifuge", "Centrifuge", RecipeMaps.centrifugeRecipes);
-        gregTechExporter
-            .addRecipeMap(document, "gregtech:electrolyzer", "Electrolyzer", RecipeMaps.electrolyzerRecipes);
-        gregTechExporter
-            .addRecipeMap(document, "gregtech:chemical_reactor", "Chemical Reactor", RecipeMaps.chemicalReactorRecipes);
+        GregTechRecipeMapCatalog gregTechCatalog = new GregTechRecipeMapCatalog();
+
+        for (GregTechRecipeMapDefinition definition : gregTechCatalog.getRecipeMaps()) {
+            try {
+                System.out.println("GTNH Calculator Utility exporting map: " + definition.machineId);
+
+                gregTechExporter
+                    .addRecipeMap(document, definition.machineId, definition.machineName, definition.recipeMap);
+            } catch (Exception e) {
+                System.out.println("GTNH Calculator Utility failed to export map: " + definition.machineId);
+                e.printStackTrace();
+            }
+        }
 
         deduplicateRecipes(document);
         populateDiagnostics(document);
