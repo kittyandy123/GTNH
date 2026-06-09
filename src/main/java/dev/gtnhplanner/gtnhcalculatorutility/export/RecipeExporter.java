@@ -62,7 +62,7 @@ public class RecipeExporter {
         deduplicateRecipes(document);
         populateDiagnostics(document, itemStackExporter);
 
-        File outputFile = new File(exportDir, "recipes-test.json");
+        File outputFile = new File(exportDir, "recipes.json");
         writeJson(outputFile, document);
 
         return createResult(outputFile, document);
