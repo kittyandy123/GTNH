@@ -60,7 +60,7 @@ public class RecipeExporter {
         }
 
         deduplicateRecipes(document);
-        populateDiagnostics(document, itemStackExporter);
+        populateDiagnostics(document, itemStackExporter, gregTechExporter);
 
         File outputFile = new File(exportDir, "recipes.json");
         writeJson(outputFile, document);
@@ -100,13 +100,16 @@ public class RecipeExporter {
         document.recipes = deduplicatedRecipes;
     }
 
-    private void populateDiagnostics(ExportDocument document, ItemStackExporter itemStackExporter) {
+    private void populateDiagnostics(ExportDocument document, ItemStackExporter itemStackExporter,
+        GregTechRecipeMapExporter gregTechExporter) {
         ExportDiagnostics diagnostics = new ExportDiagnostics();
 
         diagnostics.totalRecipes = document.recipes.size();
         diagnostics.duplicateRecipesSkipped = duplicateRecipesSkipped;
         diagnostics.displayNameFallbackItems.addAll(itemStackExporter.getDisplayNameFallbackItems());
         diagnostics.displayNameFallbacks = diagnostics.displayNameFallbackItems.size();
+        diagnostics.recipesSkippedDueToError = gregTechExporter.getRecipesSkippedDueToError();
+        diagnostics.recipeErrorsByMachine.putAll(gregTechExporter.getRecipeErrorsByMachine());
         diagnostics.recipeCountsByMachine.putAll(countRecipesByMachine(document));
 
         document.diagnostics = diagnostics;

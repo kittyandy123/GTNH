@@ -11,6 +11,8 @@ public class ExportDiagnostics {
     public int duplicateRecipesSkipped;
     public int displayNameFallbacks;
     public List<String> displayNameFallbackItems = new ArrayList<>();
+    public int recipesSkippedDueToError;
+    public Map<String, Integer> recipeErrorsByMachine = new LinkedHashMap<>();
     public Map<String, Integer> recipeCountsByMachine = new LinkedHashMap<>();
 
 }

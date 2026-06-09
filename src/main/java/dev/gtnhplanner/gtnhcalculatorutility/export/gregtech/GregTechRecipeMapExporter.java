@@ -4,7 +4,9 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
@@ -20,6 +22,8 @@ import gregtech.api.util.GTRecipe;
 public class GregTechRecipeMapExporter {
 
     private final ItemStackExporter itemStackExporter;
+    private int recipesSkippedDueToError;
+    private final Map<String, Integer> recipeErrorsByMachine = new LinkedHashMap<>();
 
     public GregTechRecipeMapExporter(ItemStackExporter itemStackExporter) {
         this.itemStackExporter = itemStackExporter;
@@ -41,6 +45,8 @@ public class GregTechRecipeMapExporter {
                 ExportRecipe recipe = createGregTechRecipe(machineId, machineName, recipeMap, gtRecipe);
                 document.recipes.add(recipe);
             } catch (Exception e) {
+                recordRecipeError(machineId);
+
                 System.out.println(
                     "GTNH Calculator Utility skipped recipe in map " + machineId
                         + " due to "
@@ -50,6 +56,25 @@ public class GregTechRecipeMapExporter {
                         + e.getMessage());
                 e.printStackTrace();
             }
+        }
+    }
+
+    public int getRecipesSkippedDueToError() {
+        return recipesSkippedDueToError;
+    }
+
+    public Map<String, Integer> getRecipeErrorsByMachine() {
+        return new LinkedHashMap<>(recipeErrorsByMachine);
+    }
+
+    private void recordRecipeError(String machineId) {
+        recipesSkippedDueToError++;
+
+        Integer currentCount = recipeErrorsByMachine.get(machineId);
+        if (currentCount == null) {
+            recipeErrorsByMachine.put(machineId, 1);
+        } else {
+            recipeErrorsByMachine.put(machineId, currentCount + 1);
         }
     }
 
