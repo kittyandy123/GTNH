@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.Locale;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -26,10 +27,14 @@ public class ItemStackExporter {
     }
 
     public String getItemId(ItemStack stack) {
+        if (stack == null || stack.getItem() == null) {
+            return "unknown";
+        }
+
         Item item = stack.getItem();
         String itemId = Item.itemRegistry.getNameForObject(item);
 
-        if (itemId == null) {
+        if (itemId == null || itemId.isEmpty()) {
             return "unknown";
         }
 
@@ -69,10 +74,20 @@ public class ItemStackExporter {
     }
 
     private String sanitizeId(String value) {
-        return value.toLowerCase()
-            .replace(":", "_")
-            .replace(" ", "_")
-            .replace("/", "_");
+        if (value == null || value.isEmpty()) {
+            return "unknown";
+        }
+
+        String sanitized = value.toLowerCase(Locale.ROOT)
+            .replaceAll("[^a-z0-9._-]+", "_")
+            .replaceAll("_+", "_")
+            .replaceAll("^_|_$", "");
+
+        if (sanitized.isEmpty()) {
+            return "unknown";
+        }
+
+        return sanitized;
     }
 
 }
