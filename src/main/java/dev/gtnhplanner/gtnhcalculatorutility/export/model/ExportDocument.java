@@ -5,7 +5,7 @@ import java.util.List;
 
 public class ExportDocument {
 
-    public int schemaVersion = 1;
+    public int schemaVersion = 2;
     public PackInfo pack = new PackInfo();
     public ExportInfo export = new ExportInfo();
     public ExportDiagnostics diagnostics = new ExportDiagnostics();

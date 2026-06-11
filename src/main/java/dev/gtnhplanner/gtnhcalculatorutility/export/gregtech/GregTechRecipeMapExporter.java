@@ -4,6 +4,7 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,12 @@ public class GregTechRecipeMapExporter {
     private final ItemStackExporter itemStackExporter;
     private int recipesSkippedDueToError;
     private final Map<String, Integer> recipeErrorsByMachine = new LinkedHashMap<>();
+    private int toolInputsExtracted;
+    private final Map<String, Integer> toolInputsByMachine = new LinkedHashMap<>();
+    private int zeroAmountInputsMovedToTools;
+    private int zeroAmountInputsRemaining;
+    private int inferredToolAmounts;
+    private final List<String> sampleToolInputs = new ArrayList<>();
 
     public GregTechRecipeMapExporter(ItemStackExporter itemStackExporter) {
         this.itemStackExporter = itemStackExporter;
@@ -67,6 +74,30 @@ public class GregTechRecipeMapExporter {
         return new LinkedHashMap<>(recipeErrorsByMachine);
     }
 
+    public int getToolInputsExtracted() {
+        return toolInputsExtracted;
+    }
+
+    public Map<String, Integer> getToolInputsByMachine() {
+        return new LinkedHashMap<>(toolInputsByMachine);
+    }
+
+    public int getZeroAmountInputsMovedToTools() {
+        return zeroAmountInputsMovedToTools;
+    }
+
+    public int getZeroAmountInputsRemaining() {
+        return zeroAmountInputsRemaining;
+    }
+
+    public int getInferredToolAmounts() {
+        return inferredToolAmounts;
+    }
+
+    public List<String> getSampleToolInputs() {
+        return new ArrayList<>(sampleToolInputs);
+    }
+
     private void recordRecipeError(String machineId) {
         recipesSkippedDueToError++;
 
@@ -104,9 +135,9 @@ public class GregTechRecipeMapExporter {
             recipe.metadata.neiDescription = neiDescription;
         }
 
-        addItemStacks(recipe, recipe.inputs, gtRecipe, gtRecipe.mInputs, true);
+        addItemStacks(recipe, recipe.inputs, gtRecipe, gtRecipe.mInputs, true, machineId);
         addFluidStacks(recipe.inputs, gtRecipe, gtRecipe.mFluidInputs, true);
-        addItemStacks(recipe, recipe.outputs, gtRecipe, gtRecipe.mOutputs, false);
+        addItemStacks(recipe, recipe.outputs, gtRecipe, gtRecipe.mOutputs, false, machineId);
         addFluidStacks(recipe.outputs, gtRecipe, gtRecipe.mFluidOutputs, false);
 
         return recipe;
@@ -140,7 +171,7 @@ public class GregTechRecipeMapExporter {
     }
 
     private void addItemStacks(ExportRecipe recipe, List<ExportStack> target, GTRecipe gtRecipe, ItemStack[] stacks,
-        boolean input) {
+        boolean input, String machineId) {
         if (stacks == null) {
             return;
         }
@@ -157,12 +188,64 @@ public class GregTechRecipeMapExporter {
                 continue;
             }
 
+            if (input && isNonConsumedToolCandidate(stack)) {
+                ExportStack toolStack = itemStackExporter.toExportStack(stack, getToolAmount(stack));
+                addTool(recipe, toolStack);
+                recordToolInput(machineId, stack, toolStack);
+                continue;
+            }
+
             ExportStack exportStack = itemStackExporter.toExportStack(stack);
+
+            if (input && exportStack.amount <= 0) {
+                zeroAmountInputsRemaining++;
+            }
 
             int chance = input ? getChance(gtRecipe, "getInputChance", i) : getChance(gtRecipe, "getOutputChance", i);
 
             applyChance(exportStack, chance);
             target.add(exportStack);
+        }
+    }
+
+    private boolean isNonConsumedToolCandidate(ItemStack stack) {
+        return stack.stackSize <= 0;
+    }
+
+    private int getToolAmount(ItemStack stack) {
+        if (stack.stackSize <= 0) {
+            inferredToolAmounts++;
+            return 1;
+        }
+
+        return stack.stackSize;
+    }
+
+    private void addTool(ExportRecipe recipe, ExportStack toolStack) {
+        if (recipe.tools == null) {
+            recipe.tools = new ArrayList<>();
+        }
+
+        recipe.tools.add(toolStack);
+    }
+
+    private void recordToolInput(String machineId, ItemStack sourceStack, ExportStack toolStack) {
+        toolInputsExtracted++;
+
+        if (sourceStack.stackSize <= 0) {
+            zeroAmountInputsMovedToTools++;
+        }
+
+        Integer currentCount = toolInputsByMachine.get(machineId);
+        if (currentCount == null) {
+            toolInputsByMachine.put(machineId, 1);
+        } else {
+            toolInputsByMachine.put(machineId, currentCount + 1);
+        }
+
+        if (sampleToolInputs.size() < 25) {
+            sampleToolInputs
+                .add(machineId + ": " + toolStack.displayName + " [" + toolStack.id + ":" + toolStack.meta + "]");
         }
     }
 
@@ -242,12 +325,23 @@ public class GregTechRecipeMapExporter {
         appendFluidChances(identity, recipe, recipe.mFluidOutputs, false);
         identity.append('|');
 
-        appendItemStacks(identity, recipe.mInputs);
+        identity.append("consumedItemInputs:");
+        appendItemStacks(identity, recipe.mInputs, true, false);
         identity.append('|');
+
+        identity.append("toolItemInputs:");
+        appendItemStacks(identity, recipe.mInputs, true, true);
+        identity.append('|');
+
+        identity.append("fluidInputs:");
         appendFluidStacks(identity, recipe.mFluidInputs);
         identity.append('|');
-        appendItemStacks(identity, recipe.mOutputs);
+
+        identity.append("itemOutputs:");
+        appendItemStacks(identity, recipe.mOutputs, false, false);
         identity.append('|');
+
+        identity.append("fluidOutputs:");
         appendFluidStacks(identity, recipe.mFluidOutputs);
 
         return machineId + ":" + sha1Short(identity.toString());
@@ -296,7 +390,7 @@ public class GregTechRecipeMapExporter {
         return 10000;
     }
 
-    private void appendItemStacks(StringBuilder identity, ItemStack[] stacks) {
+    private void appendItemStacks(StringBuilder identity, ItemStack[] stacks, boolean input, boolean toolsOnly) {
         if (stacks == null) {
             return;
         }
@@ -304,6 +398,18 @@ public class GregTechRecipeMapExporter {
         for (ItemStack stack : stacks) {
             if (stack == null) {
                 continue;
+            }
+
+            if (input && isProgrammedCircuit(stack)) {
+                continue;
+            }
+
+            if (input) {
+                boolean tool = isNonConsumedToolCandidate(stack);
+
+                if (tool != toolsOnly) {
+                    continue;
+                }
             }
 
             identity.append("item:")

@@ -11,6 +11,7 @@ public class ExportRecipe {
     public double durationSeconds;
     public int eut;
     public List<ExportStack> inputs = new ArrayList<>();
+    public List<ExportStack> tools;
     public List<ExportStack> outputs = new ArrayList<>();
     public RecipeMetadata metadata = new RecipeMetadata();
 

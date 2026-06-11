@@ -17,13 +17,33 @@ public class ItemStackExporter {
     private final Set<String> displayNameFallbackItems = new HashSet<>();
 
     public ExportStack toExportStack(ItemStack stack) {
+        return toExportStack(stack, getStackSize(stack));
+    }
+
+    public ExportStack toExportStack(ItemStack stack, int amount) {
         return new ExportStack(
             "item",
             getItemId(stack),
-            stack.getItemDamage(),
+            getItemMeta(stack),
             getSafeDisplayName(stack),
-            stack.stackSize,
+            amount,
             "items");
+    }
+
+    private int getItemMeta(ItemStack stack) {
+        if (stack == null) {
+            return 0;
+        }
+
+        return stack.getItemDamage();
+    }
+
+    private int getStackSize(ItemStack stack) {
+        if (stack == null) {
+            return 0;
+        }
+
+        return stack.stackSize;
     }
 
     public String getItemId(ItemStack stack) {

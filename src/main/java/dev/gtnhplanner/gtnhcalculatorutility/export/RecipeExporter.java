@@ -110,6 +110,14 @@ public class RecipeExporter {
         diagnostics.displayNameFallbacks = diagnostics.displayNameFallbackItems.size();
         diagnostics.recipesSkippedDueToError = gregTechExporter.getRecipesSkippedDueToError();
         diagnostics.recipeErrorsByMachine.putAll(gregTechExporter.getRecipeErrorsByMachine());
+
+        diagnostics.toolInputsExtracted = gregTechExporter.getToolInputsExtracted();
+        diagnostics.toolInputsByMachine.putAll(gregTechExporter.getToolInputsByMachine());
+        diagnostics.zeroAmountInputsMovedToTools = gregTechExporter.getZeroAmountInputsMovedToTools();
+        diagnostics.zeroAmountInputsRemaining = gregTechExporter.getZeroAmountInputsRemaining();
+        diagnostics.inferredToolAmounts = gregTechExporter.getInferredToolAmounts();
+        diagnostics.sampleToolInputs.addAll(gregTechExporter.getSampleToolInputs());
+
         diagnostics.recipeCountsByMachine.putAll(countRecipesByMachine(document));
 
         document.diagnostics = diagnostics;

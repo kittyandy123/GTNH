@@ -13,6 +13,14 @@ public class ExportDiagnostics {
     public List<String> displayNameFallbackItems = new ArrayList<>();
     public int recipesSkippedDueToError;
     public Map<String, Integer> recipeErrorsByMachine = new LinkedHashMap<>();
+
+    public int toolInputsExtracted;
+    public Map<String, Integer> toolInputsByMachine = new LinkedHashMap<>();
+    public int zeroAmountInputsMovedToTools;
+    public int zeroAmountInputsRemaining;
+    public int inferredToolAmounts;
+    public List<String> sampleToolInputs = new ArrayList<>();
+
     public Map<String, Integer> recipeCountsByMachine = new LinkedHashMap<>();
 
 }
