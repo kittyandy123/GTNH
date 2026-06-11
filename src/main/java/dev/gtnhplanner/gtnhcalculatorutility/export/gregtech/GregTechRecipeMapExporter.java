@@ -316,6 +316,9 @@ public class GregTechRecipeMapExporter {
             .append(String.valueOf(recipe.mSpecialItems))
             .append('|');
 
+        appendProgrammedCircuits(identity, recipe.mInputs);
+        identity.append('|');
+
         appendItemChances(identity, recipe, recipe.mInputs, true);
         identity.append('|');
         appendItemChances(identity, recipe, recipe.mOutputs, false);
@@ -443,6 +446,25 @@ public class GregTechRecipeMapExporter {
                 .append(':')
                 .append(stack.amount)
                 .append(';');
+        }
+    }
+
+    private void appendProgrammedCircuits(StringBuilder identity, ItemStack[] stacks) {
+        identity.append("programmedCircuits:");
+
+        if (stacks == null) {
+            return;
+        }
+
+        for (ItemStack stack : stacks) {
+            if (stack == null) {
+                continue;
+            }
+
+            if (isProgrammedCircuit(stack)) {
+                identity.append(stack.getItemDamage())
+                    .append(';');
+            }
         }
     }
 
