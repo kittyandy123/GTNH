@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -14,6 +15,7 @@ import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportStack;
 
 public class ItemStackExporter {
 
+    private static final Pattern MINECRAFT_FORMATTING_CODE = Pattern.compile("(?i)\u00A7[0-9A-FK-OR]");
     private final Set<String> displayNameFallbackItems = new HashSet<>();
 
     public ExportStack toExportStack(ItemStack stack) {
@@ -76,7 +78,7 @@ public class ItemStackExporter {
             String displayName = stack.getDisplayName();
 
             if (displayName != null && !displayName.isEmpty()) {
-                return displayName;
+                return cleanDisplayName(displayName);
             }
         } catch (Exception e) {
             String warningKey = getItemId(stack) + ":" + stack.getItemDamage();
@@ -108,6 +110,15 @@ public class ItemStackExporter {
         }
 
         return sanitized;
+    }
+
+    private String cleanDisplayName(String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+
+        return MINECRAFT_FORMATTING_CODE.matcher(value)
+            .replaceAll("");
     }
 
 }
