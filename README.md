@@ -63,10 +63,10 @@ The UI should not reproduce or guess recipe semantics that the exporter can dete
 The two repositories remain independent, but changes to the exported schema must be coordinated with the UI consumer.
 
 The machine-readable schema is published at
-[`schema/recipes-v1.schema.json`](schema/recipes-v2.schema.json).
+[`schema/recipes-v2.schema.json`](schema/recipes-v2.schema.json).
 
 A deterministic representative export is maintained at
-[`src/test/resource/fixtures/schema-v2-representative.json`](src/test/resources/fixtures/schema-v2-representative.json).
+[`src/test/resources/fixtures/schema-v2-representative.json`](src/test/resources/fixtures/schema-v2-representative.json).
 
 ## Current export coverage
 
@@ -203,7 +203,7 @@ Linux or macOS:
 ./gradlew test
 ```
 
-The test suite currently verifies schema-v2 model defaults, production JSON serialization, the representative fixture, and JSON Schema validation;
+The test suite currently verifies schema-v2 model defaults, production JSON serialization, the representative fixture, and JSON Schema validation.
 
 ### Check formatting
 
