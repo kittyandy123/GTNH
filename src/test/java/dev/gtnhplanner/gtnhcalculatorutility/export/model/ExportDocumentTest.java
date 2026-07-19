@@ -5,15 +5,16 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.StringWriter;
 import java.util.ArrayList;
 
 import org.junit.Test;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
+import dev.gtnhplanner.gtnhcalculatorutility.export.ExportDocumentJsonWriter;
 
 public class ExportDocumentTest {
 
@@ -54,9 +55,10 @@ public class ExportDocumentTest {
         recipe.metadata.circuit = 24;
         document.recipes.add(recipe);
 
-        Gson gson = new GsonBuilder().setPrettyPrinting()
-            .create();
-        JsonObject root = new JsonParser().parse(gson.toJson(document))
+        StringWriter writer = new StringWriter();
+        new ExportDocumentJsonWriter().write(writer, document);
+
+        JsonObject root = new JsonParser().parse(writer.toString())
             .getAsJsonObject();
 
         assertEquals(
