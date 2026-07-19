@@ -1,106 +1,440 @@
-# Example Forge Mod for Minecraft 1.7.10
+# GTNH Calculator Utility
 
-[![](https://jitpack.io/v/GTNewHorizons/ExampleMod1.7.10.svg)](https://jitpack.io/#GTNewHorizons/ExampleMod1.7.10)
-[![](https://github.com/GTNewHorizons/ExampleMod1.7.10/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/GTNewHorizons/ExampleMod1.7.10/actions/workflows/build-and-test.yml)
+Runtime recipe exporter for **GT New Horizons** and the authoritative data source for the separate **GTNH Planner** web application.
 
-An example mod for Minecraft 1.7.10 with Forge focussed on a stable, updatable setup.
+## Project Status
 
-<!-- omit in toc -->
-### Table of Contents
+GTNH Calculator Utility is under active development.
 
-* [Example Forge Mod for Minecraft 1.7.10](#example-forge-mod-for-minecraft-1710)
-    * [Motivation](#motivation)
-    * [Help! I'm stuck!](#help-im-stuck)
-    * [Getting started](#getting-started)
-    * [Features](#features)
-    * [Files](#files)
-    * [Forge's Access Transformers](#forges-access-transformers)
-    * [Mixins](#mixins)
-    * [Advanced](#advanced)
-    * [Feedback wanted](#feedback-wanted)
+The exporter and schema-v2 JSON output are functional and are already consumed by the companion web UI. However, recipe-system coverage, automated contract testing, machine metadata, and release packaging are still being expanded.
 
+The current version should be treated as a functional development build rather than a complete, stable release.
 
-### Motivation
+## Purpose
 
-We had our fair share in struggles with build scripts for Minecraft Forge. There are quite a few pitfalls from non-obvious error messages. This Example Project provides you a build system you can adapt to over 90% of Minecraft Forge mods and can easily be updated if need be.
+GTNH Calculator Utility is a Minecraft Forge mod for Minecraft 1.7.10 that runs inside a loaded GT New Horizons environment.
 
-### Help! I'm stuck!
+The mod reads recipe information directly from Minecraft and GregTech runtime registries, classifies the exported data, and writes it to a structured `recipes.json` file.
 
-We all have been there! Check out our [FAQ](https://github.com/GTNewHorizons/ExampleMod1.7.10/blob/main/docs/FAQ.md). If that doesn't help, please open an issue.
+That export is consumed by a separate browser and production-planning application:
 
-### Getting started
+- [Exporter repository](https://github.com/kittyandy123/GTNH)
+- [Planner UI repository](https://github.com/kittyandy123/GTNH-UI)
 
-Creating mod from scratch:
-1. Unzip [project starter](https://github.com/GTNewHorizons/ExampleMod1.7.10/releases/download/master-packages/starter.zip) into project directory.
-2. Replace placeholders in LICENSE-template and rename it to LICENSE, or remove LICENSE-template and put any other license you like on your code. This is an permissive OSS project and we encourage you participate in OSS movement by having permissive license like one in template. You can find out pros and cons of OSS software in [this article](https://www.freecodecamp.org/news/what-is-great-about-developing-open-source-and-what-is-not/)
-3. Ensure your project is under VCS. For example initialise git repository by running `git init; git commit --message "initialized repository"`.
-4. Replace placeholders (edit values in gradle.properties, change example package and class names, etc.)
-5. Run `./gradlew setupDecompWorkspace`
-6. Run `./gradlew build`
-6. Make sure to check out the rest sections of this file.
-7. You are good to go!
+The Forge mod is the exporter layer. Recipe browsing, production calculations, graph interaction, saved plans, and other user-facing planner behavior belong in the web application.
 
-We also have described guidelines for existing mod [migration](docs/migration.md) and [porting](docs/porting.md)
+## Architecture
 
-### Features
+The project is intentionally divided into two repositories.
 
- - Updatable: Replace [`build.gradle`](https://github.com/GTNewHorizons/ExampleMod1.7.10/blob/main/build.gradle) with a newer version
- - Optional API artifact (.jar)
- - Optional version replacement in Java files
- - Optional shadowing of dependencies
- - Simplified setup of Mixin and example
- - Scala support (add sources under `src/main/scala/` instead of `src/main/java/`)
- - Optional named developer account for consistent player progression during testing
- - Boilerplate forge mod as starting point
- - Improved warnings for pitfalls
- - Git Tags integration for versioning
- - [Jitpack](https://jitpack.io) CI
- - GitHub CI:
-   - Releasing your artifacts on new tags pushed. Push git tag named after version (e.g. 1.0.0) which will trigger a release of artifacts with according names.
-   - Running smoke test for server startup. On any server crash occurring workflow will fail and print the crash log.
+### Forge exporter
 
-### Files
- - [`build.gradle`](https://github.com/GTNewHorizons/ExampleMod1.7.10/blob/main/build.gradle): This is the core script of the build process. You should not need to tamper with it, unless you are trying to accomplish something out of the ordinary. __Do not touch this file! You will make a future update near impossible if you do so!__
- - [`gradle.properties`](https://github.com/GTNewHorizons/ExampleMod1.7.10/blob/main/gradle.properties): The core configuration file. It includes
- - [`dependencies.gradle[.kts]`](https://github.com/GTNewHorizons/ExampleMod1.7.10/blob/main/dependencies.gradle): Add your mod's dependencies in this file. This is separate from the main build script, so you may replace the [`build.gradle`](https://github.com/SinTh0r4s/ExampleMod1.7.10/blob/main/build.gradle) if an update is available.
- - [`repositories.gradle[.kts]`](https://github.com/GTNewHorizons/ExampleMod1.7.10/blob/main/repositories.gradle): Add your dependencies' repositories. This is separate from the main build script, so you may replace the [`build.gradle`](https://github.com/SinTh0r4s/ExampleMod1.7.10/blob/main/build.gradle) if an update is available.
- - `addon.gradle[.kts]`: Any additional build logic. This is separate from the main build script, so you may replace the [`build.gradle`](https://github.com/SinTh0r4s/ExampleMod1.7.10/blob/main/build.gradle) if an update is available. See [Advanced](#advanced) for more details.
- - [`jitpack.yml`](https://github.com/GTNewHorizons/ExampleMod1.7.10/blob/main/jitpack.yml): Ensures that your mod is available as import over [Jitpack](https://jitpack.io).
- - [`.github/workflows/gradle.yml`](https://github.com/GTNewHorizons/ExampleMod1.7.10/blob/main/.github/workflows/gradle.yml): A simple CI script that will build your mod any time it is pushed to `master` or `main` and publish the result as release in your repository. This feature is free with GitHub if your repository is public.
+This repository runs inside GTNH and is responsible for:
 
-### Forge's Access Transformers
+- Reading runtime recipe registries and GregTech recipe maps.
+- Preserving exact recipe identities.
+- Distinguishing consumed inputs and non-consumed tooling.
+- Extracting programmed circuits and recipe metadata.
+- Exporting item, fluid, duration, EU/t, and chance information.
+- Detecting and skipping duplicate recipe identities.
+- Recording diagnostics and extraction failures.
+- Writing the resulting JSON document.
 
-You may activate Forge's Access Transformers by defining a configuration file in `gradle.properties`.
+The exporter is the authoritative source for Minecraft and GTNH semantics that can be determined from the loaded game.
 
-Check out the [`example-access-transformers`](https://github.com/GTNewHorizons/ExampleMod1.7.10/tree/example-access-transformers) branch for a working example!
+### Planner UI
 
-> [!WARNING]
-> Access Transformers are bugged and will deny you any sources for the decompiled Minecraft! Your development environment will still work, but you might face some inconveniences. For example, IntelliJ will not permit searches in dependencies without attached sources.
+The separate React and TypeScript application is responsible for:
 
-### Mixins
+- Loading and validating the exported recipe catalog.
+- Searching and browsing recipes.
+- Displaying exact recipes and grouped output views.
+- Navigating between producers and consumers.
+- Calculating production rates and machine requirements.
+- Building production-line graphs and named planning workspaces.
+- Persisting plans and comparing them against future base-state data.
 
-[Mixins](https://github.com/SpongePowered/Mixin) are used to modify vanilla or mod/library code during runtime without having to edit, recompile, and redistribute the original code. For example, mixins can change a hardcoded value, redirect a method call, inject additional code, access private fields/methods, make a class implement your interface, and more. Mixins are an advanced feature which most normal mods will not require.
+The UI should not reproduce or guess recipe semantics that the exporter can determine more accurately.
 
-Documentation about Mixin features can be found here: [Mixin Wiki](https://github.com/SpongePowered/Mixin/wiki) and [MixinExtras Wiki](https://github.com/LlamaLad7/MixinExtras/wiki)
+### Data contract
 
-There are many examples of mixins in these mods: [Hodgepodge](https://github.com/GTNewHorizons/Hodgepodge) and [Angelica](https://github.com/GTNewHorizons/Angelica)
+`recipes.json` is the contract between the exporter and the planner UI.
 
-To enable Mixins in your project, follow one of the example commits:
-- use [normal mixins](https://github.com/GTNewHorizons/ExampleMod1.7.10/commit/beba55615fa8337b7639f0d5b18db6cc8d4826be) for basic and quick registration
-- use [GTNH IMixins](https://github.com/GTNewHorizons/ExampleMod1.7.10/commit/055cd4f18765a421a86c706f53b62116988297e3) (recommended) for the same thing as below, but in a less verbose and more unified manner using the IMixins api
-- use [GTNH Early/Late mixins](https://github.com/GTNewHorizons/ExampleMod1.7.10/commit/c4df59d92164775b69451f3e690239e93d1fc979) to have full control over the registration logic and check for presence of other mods during runtime to load your mixins
+The two repositories remain independent, but changes to the exported schema must be coordinated with the UI consumer.
 
-The extra required dependencies are handled automatically after mixins are enabled.
+## Current export coverage
 
-### Advanced
+The exporter currently includes:
 
-If your project requires custom gradle commands you may add a `addon.gradle[.kts]` to your project. It will be added automatically to the build script. Although we recommend against it, it is sometimes required. When in doubt, feel free to ask us about it. You may break future updates of this build system!
-If you need access to properties modified later in the buildscript, you can also use a `addon.late.gradle[.kts]`.
-For local tweaks that you don't want to commit to Git, like adding extra JVM arguments for testing, use `addon[.late].local.gradle[.kts]`.
+- Vanilla furnace recipes.
+- A curated set of GregTech recipe maps.
 
-### Feedback wanted
+Current GregTech coverage:
 
-If you tried out this build script we would love to head your opinion! Is there any feature missing for you? Did something not work? Please open an issue and we will try to resolve it asap!
+- Mixer
+- Centrifuge
+- Electrolyzer
+- Chemical Reactor
+- Distillery
+- Macerator
+- Compressor
+- Extractor
+- Bender
+- Wiremill
+- Lathe
+- Assembler
+- Fluid Solidifier
+- Forming Press
+- Cutting Machine
+- Laser Engraver
+- Polarizer
+- Extruder
 
-Happy modding,\
-[SinTh0r4s](https://github.com/SinTh0r4s), [TheElan](https://github.com/TheElan) and [basdxz](https://github.com/basdxz)
+This is not yet complete coverage of every GTNH recipe map, multiblock, passive resource system, magic system, or machine-specific mechanic.
+
+Recipe maps are registered explicitly so that coverage can be expanded and validated deliberately instead of silently assuming that every discovered recipe is safe for planning.
+
+## Current capabilities
+
+The exporter currently supports:
+
+- Schema-v2 JSON output.
+- Vanilla furnace recipe extraction.
+- GregTech recipe-map extraction.
+- Item and fluid inputs and outputs.
+- Consumed input classification.
+- Non-consumed physical tooling in `tools[]`.
+- Programmed circuit extraction through recipe metadata.
+- Recipe duration in ticks and seconds.
+- Recipe EU/t.
+- Optional input and output chances.
+- Machine ID, name, and category.
+- GregTech recipe-map metadata.
+- Hidden and fake-recipe metadata.
+- Special-value and NBT-related metadata.
+- Deterministic recipe identity generation.
+- Duplicate recipe removal.
+- Display-name cleanup and fallback reporting.
+- Per-machine recipe counts.
+- Recipe-export error diagnostics.
+- Tool-extraction diagnostics.
+- Pretty-printed JSON output for inspection and development.
+
+## Requirements
+
+### Runtime export
+
+Generating an export requires:
+
+- A GT New Horizons Minecraft 1.7.10 environment.
+- The built GTNH Calculator Utility mod installed in that environment.
+- A loaded client or server containing the runtime recipe registries to export.
+
+### Development
+
+Local development currently uses:
+
+- JDK 25.
+- The included Gradle wrapper.
+- Git.
+
+The repository uses Jabel for modern Java syntax while compiling to Java 8-compatible bytecode.
+
+Jabel provides syntax support only. Source code must not rely on Java runtime APIs that are unavailable to the target environment.
+
+## Building the project
+
+The Gradle wrapper should be used instead of a separately installed Gradle distribution.
+
+### Windows PowerShell
+
+```powershell
+.\gradlew.bat build
+```
+
+### Linux or macOS
+```bash
+./gradlew build
+```
+
+The `build` task assembles the project and runs its configured verification tasks.
+
+## Development tasks
+
+### Run a development client
+
+Windows:
+```powershell
+.\gradlew.bat runClient
+```
+
+Linux or macOS:
+```bash
+./gradlew runClient
+```
+
+### Run a development server
+
+Windows:
+```powershell
+.\gradlew.bat runServer
+```
+
+Linux or macOS:
+```bash
+./gradlew runServer
+```
+
+### Run tests
+
+Windows:
+```powershell
+.\gradlew.bat test
+```
+
+Linux or macOS:
+```bash
+./gradlew test
+```
+
+### Check formatting
+
+Windows:
+```powershell
+.\gradlew.bat spotlessCheck
+```
+
+Linux or macOS:
+```bash
+./gradlew spotlessCheck
+```
+
+### Apply formatting
+
+Windows:
+```powershell
+.\gradlew.bat spotlessApply
+```
+
+Linux or macOS:
+```bash
+.\gradlew.bat spotlessApply
+```
+
+### Build-system troubleshooting
+
+The GTNH build tooling provides a basic troubleshooting task:
+
+Windows:
+```powershell
+.\gradlew.bat faq
+```
+
+Linux or macOS:
+```bash
+./gradlew faq
+```
+
+## Using the exporter
+
+Install the built mod in a GTNH instance, launch the instance, and enter a world or server with the required recipe registries loaded.
+
+Run:
+```text
+/gtnhcalc export
+```
+
+The command exports the current recipe catalog and prints:
+- The total number of exported recipes.
+- The output file path.
+- The number of duplicate recipes skipped.
+- Recipe counts by machine.
+
+The command currently runs synchronously. A large export may briefly occupy the game thread while recipe extraction and JSON writing complete.
+
+## Commands
+| Command                | Purpose                                                                    |
+|------------------------|----------------------------------------------------------------------------|
+| `/gtnhcalc export`     | Exports the current recipe catalog to `recipes.json`.                      |
+| `/gtnhcalc gt-summary` | Lists discovered GregTech recipe maps, truncated after 20 entries in chat. |
+| `/gtnhcalc hello`      | Verifies that the mod command was registered successfully.                 |
+
+Command aliases:
+- `/gtnhcalculator`
+- `/gtnhcu`
+
+The command currently has no elevated permission requirement. Server operators should be aware that any command sender may invoke it in the present implementation.
+
+## Export location
+
+The exporter writes to:
+```text
+<Minecraft directory>/gtnh-calculator-utility/recipes.json
+```
+
+For a normal client installation, `<Minecraft directory>` is the root directory of the active Minecraft instance.
+
+The UI repository currently consumes a copied or otherwise served version of this file.
+
+## Export document
+
+The top-level schema-v2 document contains:
+```json
+{
+  "schemaVersion": 2,
+  "pack": {},
+  "export": {},
+  "diagnostics": {},
+  "recipes": []
+}
+```
+
+### Top-level fields
+
+| Field           | Purpose                                                                               |
+|-----------------|---------------------------------------------------------------------------------------|
+| `schemaVersion` | Identifies the structure and semantics of the export contract.                        |
+| `pack`          | Identifies the modpack and Minecraft version represented by the export.               |
+| `export`        | Records the exporter source, exporter version, and UTC export timestamp.              |
+| `diagnostics`   | Records recipe totals, failures, fallbacks, duplicate counts, and tooling statistics. |
+| `recipes`       | Contains the exported exact-recipe catalog.                                           |
+
+## Recipe structure
+
+Each exported recipe can contain:
+
+| Field             | Meaning                                                   |
+|-------------------|-----------------------------------------------------------|
+| `id`              | Exporter-generated recipe identity.                       |
+| `machine`         | Machine or recipe-source identity.                        |
+| `durationTicks`   | Recipe duration in Minecraft ticks.                       |
+| `durationSeconds` | Recipe duration in seconds.                               |
+| `eut`             | Base recipe EU/t.                                         |
+| `inputs`          | Consumed inputs for one recipe operation.                 |
+| `tools`           | Required non-consumed tooling.                            |
+| `outputs`         | Outputs produced by one recipe operation.                 |
+| `metadata`        | Programmed circuits and other recipe-specific properties. |
+
+## Stack semantics
+
+Exported stacks include:
+
+| Field         | Meaning                                                    |
+|---------------|------------------------------------------------------------|
+| `kind`        | Stack type, normally `item` or `fluid`.                    |
+| `id`          | Registry or fluid identity.                                |
+| `meta`        | Item metadata value; exported fluids use `0`.              |
+| `displayName` | Human-readable label for display.                          |
+| `amount`      | Quantity used or produced per recipe operation.            |
+| `unit`        | Quantity unit, normally `items` or `L`.                    |
+| `chance`      | Optional normalized probability for a probabilistic stack. |
+
+Important identity rules:
+- Item identity is based on `id` plus `meta`.
+- Fluid identity is based on `id`.
+- `displayName` is a presentation label and must not be used as a stable identity.
+- `inputs[]` contains consumed resources.
+- `tools[]` contains required resources that are not consumed per operation.
+- `outputs[]` contains produced resources.
+- `metadata.circuit` represents a programmed circuit selector, not a consumed input or physical tool.
+- A missing `chance` field means that the stack is not represented as probabilistic in the export.
+
+Planner calculations may derive per-second input and output rates from consumed stacks and recipe duration. Tooling must not be treated as per-second consumption.
+
+## Diagnostics
+
+The export includes diagnostics intended to expose regressions and incomplete extraction.
+
+Current diagnostic categories include:
+
+- Total exported recipes.
+- Duplicate recipe identities skipped.
+- Display-name fallback count and samples.
+- Recipes skipped due to extraction errors.
+- Recipe errors grouped by machine.
+- Extracted non-consumed tool count.
+- Tool counts grouped by machine.
+- Zero-amount inputs moved to tooling.
+- Zero-amount inputs remaining after classification.
+- Tool amounts inferred by the exporter.
+- Sample extracted tooling entries.
+- Recipe counts grouped by machine.
+
+Diagnostics should be inspected whenever exporter logic, dependencies, GTNH versions, or recipe-map coverage changes.
+
+## Current limitations
+
+The project currently has several deliberate limitations:
+
+- GregTech recipe-map coverage is curated and incomplete.
+- Not every GTNH mod or recipe system is exported.
+- The schema does not yet include the exact GTNH pack version.
+- Catalog fingerprints and identity-algorithm versions are not yet exported.
+- Recipe IDs should not yet be treated as permanent foreign keys across arbitrary pack or exporter upgrades.
+- A formal published JSON Schema and cross-repository contract test suite are not yet complete.
+- Machine definitions are not yet exported separately.
+- Voltage-tier compatibility is not yet modeled by the exporter.
+- Overclocking and parallelization rules are not yet exported.
+- Multiblock hatch, coil, tier, and structure constraints are not yet represented.
+- Recipe-map support does not necessarily mean that a machine is fully modeled or safe for accurate production planning.
+- The export is currently written as one pretty-printed JSON document and can become large.
+- Live inventory, machine, power, and server telemetry are not part of the current exporter.
+- The export command currently has no permission restriction.
+
+The planner UI must represent unsupported or unknown machine behavior explicitly rather than silently assuming generic behavior.
+
+## Development direction
+
+Near-term exporter work is focused on:
+
+1. Formalizing the versioned JSON contract.
+2. Adding authoritative fixtures and automated exporter tests.
+3. Adding cross-repository compatibility tests with the planner UI.
+4. Exporting the GTNH pack version and catalog fingerprint.
+5. Versioning the recipe identity algorithm.
+6. Producing recipe-map coverage reports.
+7. Expanding recipe-map support in validated batches.
+8. Adding machine definitions and planning-safety metadata.
+9. Improving chance-extraction diagnostics.
+10. Separating extraction, semantic classification, identity, diagnostics, and file-writing responsibilities.
+
+Longer-term data acquisition may expand from the current static export into an export bundle containing:
+
+- Recipe data.
+- Machine definitions.
+- Multiblock definitions.
+- Item, fluid, and machine assets.
+- Tier and voltage metadata.
+- Overclocking and parallelization capabilities.
+- Equivalent ingredient information.
+- Read-only base and inventory snapshots.
+- Optional local or server-side snapshot integration.
+
+Static exports will remain useful for reproducibility, offline planning, debugging, and sharing even as additional acquisition methods are introduced.
+
+## Related project
+
+The companion planner UI is maintained separately:
+[GTNH-UI repository](https://github.com/kittyandy123/GTNH-UI).
+
+The UI consumes `recipes.json` and is being developed as a planner-first GTNH engineering application rather than only a generic recipe calculator.
+
+Its long-term scope includes:
+
+- Recipe browsing and navigation.
+- Named production-plan workspaces.
+- Multi-node dependency graphs.
+- Machine-count and throughput calculations.
+- Byproduct routing.
+- Base production and consumption records.
+- Progression-aware machine modeling.
+- Bottleneck and upgrade recommendations.
+- Optional read-only game or server snapshots.
+
+Those capabilities belong in the UI and planning domains rather than in this Forge exporter repository.
+
+## License
+
+This project is licensed under the MIT License.
+
+See [LICENSE](LICENSE) for the full license text.
