@@ -24,6 +24,7 @@ import dev.gtnhplanner.gtnhcalculatorutility.export.vanilla.VanillaFurnaceExport
 public class RecipeExporter {
 
     private final ExportDocumentJsonWriter jsonWriter = new ExportDocumentJsonWriter();
+    private final RecipePlanningClassifier planningClassifier = new RecipePlanningClassifier();
 
     private int duplicateRecipesSkipped;
 
@@ -58,6 +59,7 @@ public class RecipeExporter {
         }
 
         deduplicateRecipes(document);
+        planningClassifier.classify(document);
         populateDiagnostics(document, itemStackExporter, gregTechExporter);
 
         File outputFile = new File(exportDir, "recipes.json");
@@ -116,9 +118,58 @@ public class RecipeExporter {
         diagnostics.inferredToolAmounts = gregTechExporter.getInferredToolAmounts();
         diagnostics.sampleToolInputs.addAll(gregTechExporter.getSampleToolInputs());
 
+        populatePlanningDiagnostics(diagnostics, document);
+
         diagnostics.recipeCountsByMachine.putAll(countRecipesByMachine(document));
 
         document.diagnostics = diagnostics;
+    }
+
+    private void populatePlanningDiagnostics(ExportDiagnostics diagnostics, ExportDocument document) {
+        for (ExportRecipe recipe : document.recipes) {
+            if (recipe.planning == null || recipe.planning.supported) {
+                continue;
+            }
+
+            diagnostics.nonPlannableRecipes++;
+
+            String machineId = "unknown";
+
+            if (recipe.machine != null && recipe.machine.id != null) {
+                machineId = recipe.machine.id;
+            }
+
+            incrementCount(diagnostics.nonPlannableRecipesByMachine, machineId);
+
+            if (recipe.durationTicks <= 0 || recipe.durationSeconds <= 0) {
+                diagnostics.nonPositiveDurationRecipes++;
+            }
+
+            if (recipe.planning.issues.contains(RecipePlanningClassifier.DURATION_OVERFLOW_SUSPECTED)) {
+                diagnostics.suspectedDurationOverflowRecipes++;
+            }
+
+            if (diagnostics.sampleNonPlannableRecipes.size() < 25) {
+                diagnostics.sampleNonPlannableRecipes.add(
+                    machineId + ": "
+                        + recipe.id
+                        + " [ticks="
+                        + recipe.durationTicks
+                        + ", issues="
+                        + recipe.planning.issues
+                        + "]");
+            }
+        }
+    }
+
+    private void incrementCount(Map<String, Integer> counts, String key) {
+        Integer currentCount = counts.get(key);
+
+        if (currentCount == null) {
+            counts.put(key, 1);
+        } else {
+            counts.put(key, currentCount + 1);
+        }
     }
 
     private Map<String, Integer> countRecipesByMachine(ExportDocument document) {

@@ -13,6 +13,7 @@ public class ExportRecipe {
     public List<ExportStack> inputs = new ArrayList<>();
     public List<ExportStack> tools;
     public List<ExportStack> outputs = new ArrayList<>();
+    public RecipePlanningInfo planning;
     public RecipeMetadata metadata = new RecipeMetadata();
 
 }
