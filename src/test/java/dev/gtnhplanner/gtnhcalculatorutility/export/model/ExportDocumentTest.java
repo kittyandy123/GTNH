@@ -5,12 +5,18 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 import org.junit.Test;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -32,28 +38,7 @@ public class ExportDocumentTest {
 
     @Test
     public void serializesRepresentativeSchemaVersionTwoRecipe() {
-        ExportDocument document = new ExportDocument();
-
-        ExportRecipe recipe = new ExportRecipe();
-        recipe.id = "gregtech:mixer:test_recipe";
-        recipe.machine = new MachineInfo("gregtech:mixer", "Mixer", "GregTech");
-        recipe.durationTicks = 40;
-        recipe.durationSeconds = 2.0;
-        recipe.eut = 30;
-
-        ExportStack input = new ExportStack("item", "minecraft:clay_ball", 0, "Clay", 2, "items");
-        recipe.inputs.add(input);
-
-        recipe.tools = new ArrayList<>();
-        ExportStack tool = new ExportStack("item", "gregtech:shape_mold_plate", 0, "Plate Mold", 1, "items");
-        recipe.tools.add(tool);
-
-        ExportStack output = new ExportStack("fluid", "water", 0, "Water", 1000, "L");
-        output.chance = 0.75;
-        recipe.outputs.add(output);
-
-        recipe.metadata.circuit = 24;
-        document.recipes.add(recipe);
+        ExportDocument document = createRepresentativeDocument();
 
         StringWriter writer = new StringWriter();
         new ExportDocumentJsonWriter().write(writer, document);
@@ -158,6 +143,71 @@ public class ExportDocumentTest {
             serializedRecipe.getAsJsonObject("metadata")
                 .get("circuit")
                 .getAsInt());
+    }
+
+    @Test
+    public void matchesRepresentativeSchemaVersionTwoFixture() throws IOException {
+        ExportDocument document = createRepresentativeDocument();
+
+        StringWriter writer = new StringWriter();
+        new ExportDocumentJsonWriter().write(writer, document);
+
+        JsonElement expected = new JsonParser().parse(readResource("/fixtures/schema-v2-representative.json"));
+        JsonElement actual = new JsonParser().parse(writer.toString());
+
+        assertEquals(expected, actual);
+    }
+
+    private ExportDocument createRepresentativeDocument() {
+        ExportDocument document = new ExportDocument();
+        document.export.exportedAt = "2026-07-19T00:00:00Z";
+
+        ExportRecipe recipe = new ExportRecipe();
+        recipe.id = "gregtech:mixer:test_recipe";
+        recipe.machine = new MachineInfo("gregtech:mixer", "Mixer", "GregTech");
+        recipe.durationTicks = 40;
+        recipe.durationSeconds = 2.0;
+        recipe.eut = 30;
+
+        ExportStack input = new ExportStack("item", "minecraft:clay_ball", 0, "Clay", 2, "items");
+        recipe.inputs.add(input);
+
+        recipe.tools = new ArrayList<>();
+        ExportStack tool = new ExportStack("item", "gregtech:shape_mold_plate", 0, "Plate Mold", 1, "items");
+        recipe.tools.add(tool);
+
+        ExportStack output = new ExportStack("fluid", "water", 0, "Water", 1000, "L");
+        output.chance = 0.75;
+        recipe.outputs.add(output);
+
+        recipe.metadata.circuit = 24;
+        document.recipes.add(recipe);
+
+        document.diagnostics.totalRecipes = 1;
+        document.diagnostics.toolInputsExtracted = 1;
+        document.diagnostics.toolInputsByMachine.put("gregtech:mixer", 1);
+        document.diagnostics.sampleToolInputs.add("gregtech:mixer: Plate Mold [gregtech:shape_mold_plate:0]");
+        document.diagnostics.recipeCountsByMachine.put("gregtech:mixer", 1);
+
+        return document;
+    }
+
+    private String readResource(String resourcePath) throws IOException {
+        InputStream inputStream = ExportDocumentTest.class.getResourceAsStream(resourcePath);
+        assertNotNull("Missing test resource: " + resourcePath, inputStream);
+
+        StringBuilder content = new StringBuilder();
+
+        try (Reader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8)) {
+            char[] buffer = new char[1024];
+            int charactersRead;
+
+            while ((charactersRead = reader.read(buffer)) != -1) {
+                content.append(buffer, 0, charactersRead);
+            }
+        }
+
+        return content.toString();
     }
 
 }
