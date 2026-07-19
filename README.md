@@ -62,6 +62,12 @@ The UI should not reproduce or guess recipe semantics that the exporter can dete
 
 The two repositories remain independent, but changes to the exported schema must be coordinated with the UI consumer.
 
+The machine-readable schema is published at
+[`schema/recipes-v2.schema.json`](schema/recipes-v2.schema.json).
+
+A deterministic representative export is maintained at
+[`src/test/resources/fixtures/schema-v2-representative.json`](src/test/resources/fixtures/schema-v2-representative.json).
+
 ## Current export coverage
 
 The exporter currently includes:
@@ -196,6 +202,8 @@ Linux or macOS:
 ```bash
 ./gradlew test
 ```
+
+The test suite currently verifies schema-v2 model defaults, production JSON serialization, the representative fixture, and JSON Schema validation.
 
 ### Check formatting
 
@@ -371,7 +379,7 @@ The project currently has several deliberate limitations:
 - The schema does not yet include the exact GTNH pack version.
 - Catalog fingerprints and identity-algorithm versions are not yet exported.
 - Recipe IDs should not yet be treated as permanent foreign keys across arbitrary pack or exporter upgrades.
-- A formal published JSON Schema and cross-repository contract test suite are not yet complete.
+- Cross-repository compatibility testing with the planner UI is not yet complete.
 - Machine definitions are not yet exported separately.
 - Voltage-tier compatibility is not yet modeled by the exporter.
 - Overclocking and parallelization rules are not yet exported.
@@ -387,7 +395,7 @@ The planner UI must represent unsupported or unknown machine behavior explicitly
 
 Near-term exporter work is focused on:
 
-1. Formalizing the versioned JSON contract.
+1. Maintaining the versioned JSON contract and its compatibility guarantees.
 2. Adding authoritative fixtures and automated exporter tests.
 3. Adding cross-repository compatibility tests with the planner UI.
 4. Exporting the GTNH pack version and catalog fingerprint.

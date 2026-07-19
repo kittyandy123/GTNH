@@ -38,4 +38,10 @@ dependencies {
     devOnlyNonPublishable("com.github.GTNewHorizons:GT5-Unofficial:5.09.51.476:dev") {
         exclude group: "com.github.GTNewHorizons", module: "CodeChickenLib"
     }
+
+    testImplementation("junit:junit:4.13.2")
+
+    testImplementation("com.networknt:json-schema-validator:2.0.4") {
+        exclude group: "com.fasterxml.jackson.dataformat", module: "jackson-dataformat-yaml"
+    }
 }

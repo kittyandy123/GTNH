@@ -1,7 +1,6 @@
 package dev.gtnhplanner.gtnhcalculatorutility.export;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -13,9 +12,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
 import dev.gtnhplanner.gtnhcalculatorutility.export.gregtech.GregTechRecipeMapCatalog;
 import dev.gtnhplanner.gtnhcalculatorutility.export.gregtech.GregTechRecipeMapDefinition;
 import dev.gtnhplanner.gtnhcalculatorutility.export.gregtech.GregTechRecipeMapExporter;
@@ -26,6 +22,8 @@ import dev.gtnhplanner.gtnhcalculatorutility.export.model.ExportRecipe;
 import dev.gtnhplanner.gtnhcalculatorutility.export.vanilla.VanillaFurnaceExporter;
 
 public class RecipeExporter {
+
+    private final ExportDocumentJsonWriter jsonWriter = new ExportDocumentJsonWriter();
 
     private int duplicateRecipesSkipped;
 
@@ -63,7 +61,7 @@ public class RecipeExporter {
         populateDiagnostics(document, itemStackExporter, gregTechExporter);
 
         File outputFile = new File(exportDir, "recipes.json");
-        writeJson(outputFile, document);
+        jsonWriter.write(outputFile, document);
 
         return createResult(outputFile, document);
     }
@@ -148,15 +146,6 @@ public class RecipeExporter {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
         formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
         return formatter.format(new Date());
-    }
-
-    private void writeJson(File outputFile, ExportDocument document) throws IOException {
-        Gson gson = new GsonBuilder().setPrettyPrinting()
-            .create();
-
-        try (FileWriter writer = new FileWriter(outputFile)) {
-            gson.toJson(document, writer);
-        }
     }
 
 }
