@@ -40,4 +40,8 @@ dependencies {
     }
 
     testImplementation("junit:junit:4.13.2")
+
+    testImplementation("com.networknt:json-schema-validator:2.0.4") {
+        exclude group: "com.fasterxml.jackson.dataformat", module: "jackson-dataformat-yaml"
+    }
 }
