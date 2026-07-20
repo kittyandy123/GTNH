@@ -9,6 +9,9 @@ public class RecipePlanningClassifier {
     public static final String NEGATIVE_DURATION = "negative-duration";
     public static final String ZERO_DURATION = "zero-duration";
     public static final String DURATION_OVERFLOW_SUSPECTED = "duration-overflow-suspected";
+    public static final String SENTINEL_DURATION_SUSPECTED = "sentinel-duration-suspected";
+
+    private static final int SENTINEL_DURATION_FLOOR_TICKS = Integer.MAX_VALUE - 2;
 
     public void classify(ExportDocument document) {
         for (ExportRecipe recipe : document.recipes) {
@@ -29,6 +32,11 @@ public class RecipePlanningClassifier {
 
         if (recipe.durationTicks == 0 || recipe.durationSeconds == 0) {
             addIssue(recipe, ZERO_DURATION);
+            return;
+        }
+
+        if (recipe.durationTicks >= SENTINEL_DURATION_FLOOR_TICKS) {
+            addIssue(recipe, SENTINEL_DURATION_SUSPECTED);
         }
     }
 

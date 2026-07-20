@@ -149,6 +149,10 @@ public class RecipeExporter {
                 diagnostics.suspectedDurationOverflowRecipes++;
             }
 
+            if (recipe.planning.issues.contains(RecipePlanningClassifier.SENTINEL_DURATION_SUSPECTED)) {
+                diagnostics.suspectedSentinelDurationRecipes++;
+            }
+
             if (diagnostics.sampleNonPlannableRecipes.size() < 25) {
                 diagnostics.sampleNonPlannableRecipes.add(
                     machineId + ": "

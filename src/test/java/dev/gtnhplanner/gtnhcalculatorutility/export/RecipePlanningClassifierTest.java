@@ -54,4 +54,40 @@ public class RecipePlanningClassifierTest {
         assertTrue(recipe.planning.issues.contains(RecipePlanningClassifier.DURATION_OVERFLOW_SUSPECTED));
     }
 
+    @Test
+    public void marksMaximumDurationAsSuspectedSentinel() {
+        ExportRecipe recipe = new ExportRecipe();
+        recipe.durationTicks = Integer.MAX_VALUE;
+        recipe.durationSeconds = Integer.MAX_VALUE / 20.0;
+
+        classifier.classify(recipe);
+
+        assertFalse(recipe.planning.supported);
+        assertEquals(1, recipe.planning.issues.size());
+        assertTrue(recipe.planning.issues.contains(RecipePlanningClassifier.SENTINEL_DURATION_SUSPECTED));
+    }
+
+    @Test
+    public void marksNearMaximumDurationAsSuspectedSentinel() {
+        ExportRecipe recipe = new ExportRecipe();
+        recipe.durationTicks = Integer.MAX_VALUE - 2;
+        recipe.durationSeconds = (Integer.MAX_VALUE - 2) / 20.0;
+
+        classifier.classify(recipe);
+
+        assertFalse(recipe.planning.supported);
+        assertTrue(recipe.planning.issues.contains(RecipePlanningClassifier.SENTINEL_DURATION_SUSPECTED));
+    }
+
+    @Test
+    public void leavesDurationBelowSentinelBoundaryPlannable() {
+        ExportRecipe recipe = new ExportRecipe();
+        recipe.durationTicks = Integer.MAX_VALUE - 3;
+        recipe.durationSeconds = (Integer.MAX_VALUE - 3) / 20.0;
+
+        classifier.classify(recipe);
+
+        assertNull(recipe.planning);
+    }
+
 }

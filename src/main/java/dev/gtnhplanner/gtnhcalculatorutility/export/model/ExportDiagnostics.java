@@ -25,6 +25,7 @@ public class ExportDiagnostics {
     public Map<String, Integer> nonPlannableRecipesByMachine = new LinkedHashMap<>();
     public int nonPositiveDurationRecipes;
     public int suspectedDurationOverflowRecipes;
+    public int suspectedSentinelDurationRecipes;
     public List<String> sampleNonPlannableRecipes = new ArrayList<>();
 
     public Map<String, Integer> recipeCountsByMachine = new LinkedHashMap<>();
