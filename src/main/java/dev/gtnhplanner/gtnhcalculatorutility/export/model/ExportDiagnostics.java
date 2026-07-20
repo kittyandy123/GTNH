@@ -21,6 +21,12 @@ public class ExportDiagnostics {
     public int inferredToolAmounts;
     public List<String> sampleToolInputs = new ArrayList<>();
 
+    public int nonPlannableRecipes;
+    public Map<String, Integer> nonPlannableRecipesByMachine = new LinkedHashMap<>();
+    public int nonPositiveDurationRecipes;
+    public int suspectedDurationOverflowRecipes;
+    public List<String> sampleNonPlannableRecipes = new ArrayList<>();
+
     public Map<String, Integer> recipeCountsByMachine = new LinkedHashMap<>();
 
 }

@@ -52,6 +52,32 @@ public class ExportDocumentJsonSchemaTest {
         assertFalse("Expected unsupported schema version to be rejected", errors.isEmpty());
     }
 
+    @Test
+    public void acceptsNonPlannableRecipeWithRawNegativeDuration() throws IOException {
+        Schema schema = loadSchema();
+
+        JsonNode document = objectMapper.readTree(readResource("/fixtures/schema-v2-representative.json"));
+
+        ObjectNode recipe = (ObjectNode) document.withArray("recipes")
+            .get(0);
+
+        recipe.put("durationTicks", -2147483569);
+        recipe.put("durationSeconds", -107374178.45);
+
+        ObjectNode planning = recipe.putObject("planning");
+        planning.put("supported", false);
+        planning.putArray("issues")
+            .add("negative-duration")
+            .add("duration-overflow-suspected");
+
+        List errors = schema
+            .validate(objectMapper.writeValueAsString(document), InputFormat.JSON, executionContext -> {});
+
+        assertTrue(
+            "Expected classified negative-duration recipe to be valid, but received: " + errors,
+            errors.isEmpty());
+    }
+
     private Schema loadSchema() throws IOException {
         Path schemaPath = Paths.get("schema", "recipes-v2.schema.json");
         assertTrue("Missing JSON schema: " + schemaPath.toAbsolutePath(), Files.exists(schemaPath));
