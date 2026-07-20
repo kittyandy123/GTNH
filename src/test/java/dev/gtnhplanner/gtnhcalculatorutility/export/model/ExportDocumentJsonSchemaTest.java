@@ -78,6 +78,29 @@ public class ExportDocumentJsonSchemaTest {
             errors.isEmpty());
     }
 
+    @Test
+    public void acceptsNonPlannableRecipesWithSentinelDuration() throws IOException {
+        Schema schema = loadSchema();
+
+        JsonNode document = objectMapper.readTree(readResource("/fixtures/schema-v2-representative.json"));
+
+        ObjectNode recipe = (ObjectNode) document.withArray("recipes")
+            .get(0);
+
+        recipe.put("durationTicks", Integer.MAX_VALUE);
+        recipe.put("durationSeconds", Integer.MAX_VALUE / 20.0);
+
+        ObjectNode planning = recipe.putObject("planning");
+        planning.put("supported", false);
+        planning.putArray("issues")
+            .add("sentinel-duration-suspected");
+
+        List errors = schema
+            .validate(objectMapper.writeValueAsString(document), InputFormat.JSON, executionContext -> {});
+
+        assertTrue("Expected sentinel-duration recipe to be valid, but received: " + errors, errors.isEmpty());
+    }
+
     private Schema loadSchema() throws IOException {
         Path schemaPath = Paths.get("schema", "recipes-v2.schema.json");
         assertTrue("Missing JSON schema: " + schemaPath.toAbsolutePath(), Files.exists(schemaPath));
